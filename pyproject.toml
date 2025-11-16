@@ -1,0 +1,165 @@
+[project]
+name = "aiomoto"
+version = "0.0.1"
+description = "Moto-style AWS service mocks for aiobotocore/aioboto3"
+readme = "README.md"
+authors = [
+    { name = "Owen Lamont", email = "owenrlamont@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "aiobotocore==2.25.2",
+    "moto==5.1.16",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Testing",
+]
+
+[project.optional-dependencies]
+acm = ["moto[acm]==5.1.16"]
+acmpca = ["moto[acmpca]==5.1.16"]
+all = ["moto[all]==5.1.16"]
+amp = ["moto[amp]==5.1.16"]
+apigateway = ["moto[apigateway]==5.1.16"]
+apigatewayv2 = ["moto[apigatewayv2]==5.1.16"]
+applicationautoscaling = ["moto[applicationautoscaling]==5.1.16"]
+appsync = ["moto[appsync]==5.1.16"]
+athena = ["moto[athena]==5.1.16"]
+autoscaling = ["moto[autoscaling]==5.1.16"]
+awslambda = ["moto[awslambda]==5.1.16"]
+awslambda-simple = ["moto[awslambda-simple]==5.1.16"]
+backup = ["moto[backup]==5.1.16"]
+batch = ["moto[batch]==5.1.16"]
+batch-simple = ["moto[batch-simple]==5.1.16"]
+budgets = ["moto[budgets]==5.1.16"]
+ce = ["moto[ce]==5.1.16"]
+cloudformation = ["moto[cloudformation]==5.1.16"]
+cloudfront = ["moto[cloudfront]==5.1.16"]
+cloudtrail = ["moto[cloudtrail]==5.1.16"]
+cloudwatch = ["moto[cloudwatch]==5.1.16"]
+codebuild = ["moto[codebuild]==5.1.16"]
+codecommit = ["moto[codecommit]==5.1.16"]
+codepipeline = ["moto[codepipeline]==5.1.16"]
+cognitoidentity = ["moto[cognitoidentity]==5.1.16"]
+cognitoidp = ["moto[cognitoidp]==5.1.16"]
+comprehend = ["moto[comprehend]==5.1.16"]
+config = ["moto[config]==5.1.16"]
+databrew = ["moto[databrew]==5.1.16"]
+datapipeline = ["moto[datapipeline]==5.1.16"]
+datasync = ["moto[datasync]==5.1.16"]
+dax = ["moto[dax]==5.1.16"]
+dms = ["moto[dms]==5.1.16"]
+ds = ["moto[ds]==5.1.16"]
+dynamodb = ["moto[dynamodb]==5.1.16"]
+dynamodbstreams = ["moto[dynamodbstreams]==5.1.16"]
+ebs = ["moto[ebs]==5.1.16"]
+ec2 = ["moto[ec2]==5.1.16"]
+ec2instanceconnect = ["moto[ec2instanceconnect]==5.1.16"]
+ecr = ["moto[ecr]==5.1.16"]
+ecs = ["moto[ecs]==5.1.16"]
+efs = ["moto[efs]==5.1.16"]
+eks = ["moto[eks]==5.1.16"]
+elasticache = ["moto[elasticache]==5.1.16"]
+elasticbeanstalk = ["moto[elasticbeanstalk]==5.1.16"]
+elastictranscoder = ["moto[elastictranscoder]==5.1.16"]
+elb = ["moto[elb]==5.1.16"]
+elbv2 = ["moto[elbv2]==5.1.16"]
+emr = ["moto[emr]==5.1.16"]
+emrcontainers = ["moto[emrcontainers]==5.1.16"]
+emrserverless = ["moto[emrserverless]==5.1.16"]
+es = ["moto[es]==5.1.16"]
+events = ["moto[events]==5.1.16"]
+firehose = ["moto[firehose]==5.1.16"]
+forecast = ["moto[forecast]==5.1.16"]
+glacier = ["moto[glacier]==5.1.16"]
+glue = ["moto[glue]==5.1.16"]
+greengrass = ["moto[greengrass]==5.1.16"]
+guardduty = ["moto[guardduty]==5.1.16"]
+iam = ["moto[iam]==5.1.16"]
+inspector2 = ["moto[inspector2]==5.1.16"]
+iot = ["moto[iot]==5.1.16"]
+iotdata = ["moto[iotdata]==5.1.16"]
+ivs = ["moto[ivs]==5.1.16"]
+kinesis = ["moto[kinesis]==5.1.16"]
+kinesisvideo = ["moto[kinesisvideo]==5.1.16"]
+kinesisvideoarchivedmedia = ["moto[kinesisvideoarchivedmedia]==5.1.16"]
+kms = ["moto[kms]==5.1.16"]
+logs = ["moto[logs]==5.1.16"]
+managedblockchain = ["moto[managedblockchain]==5.1.16"]
+mediaconnect = ["moto[mediaconnect]==5.1.16"]
+medialive = ["moto[medialive]==5.1.16"]
+mediapackage = ["moto[mediapackage]==5.1.16"]
+mediastore = ["moto[mediastore]==5.1.16"]
+mediastoredata = ["moto[mediastoredata]==5.1.16"]
+meteringmarketplace = ["moto[meteringmarketplace]==5.1.16"]
+mq = ["moto[mq]==5.1.16"]
+opsworks = ["moto[opsworks]==5.1.16"]
+organizations = ["moto[organizations]==5.1.16"]
+panorama = ["moto[panorama]==5.1.16"]
+personalize = ["moto[personalize]==5.1.16"]
+pinpoint = ["moto[pinpoint]==5.1.16"]
+polly = ["moto[polly]==5.1.16"]
+proxy = ["moto[proxy]==5.1.16"]
+quicksight = ["moto[quicksight]==5.1.16"]
+ram = ["moto[ram]==5.1.16"]
+rds = ["moto[rds]==5.1.16"]
+redshift = ["moto[redshift]==5.1.16"]
+redshiftdata = ["moto[redshiftdata]==5.1.16"]
+rekognition = ["moto[rekognition]==5.1.16"]
+resourcegroups = ["moto[resourcegroups]==5.1.16"]
+resourcegroupstaggingapi = ["moto[resourcegroupstaggingapi]==5.1.16"]
+route53 = ["moto[route53]==5.1.16"]
+route53resolver = ["moto[route53resolver]==5.1.16"]
+s3 = ["moto[s3]==5.1.16"]
+s3control = ["moto[s3control]==5.1.16"]
+s3crc32c = ["moto[s3crc32c]==5.1.16"]
+sagemaker = ["moto[sagemaker]==5.1.16"]
+scheduler = ["moto[scheduler]==5.1.16"]
+sdb = ["moto[sdb]==5.1.16"]
+secretsmanager = ["moto[secretsmanager]==5.1.16"]
+server = ["moto[server]==5.1.16"]
+servicediscovery = ["moto[servicediscovery]==5.1.16"]
+servicequotas = ["moto[servicequotas]==5.1.16"]
+ses = ["moto[ses]==5.1.16"]
+signer = ["moto[signer]==5.1.16"]
+sns = ["moto[sns]==5.1.16"]
+sqs = ["moto[sqs]==5.1.16"]
+ssm = ["moto[ssm]==5.1.16"]
+ssoadmin = ["moto[ssoadmin]==5.1.16"]
+stepfunctions = ["moto[stepfunctions]==5.1.16"]
+sts = ["moto[sts]==5.1.16"]
+support = ["moto[support]==5.1.16"]
+swf = ["moto[swf]==5.1.16"]
+textract = ["moto[textract]==5.1.16"]
+timestreamwrite = ["moto[timestreamwrite]==5.1.16"]
+transcribe = ["moto[transcribe]==5.1.16"]
+wafv2 = ["moto[wafv2]==5.1.16"]
+xray = ["moto[xray]==5.1.16"]
+
+[dependency-groups]
+dev = [
+    "coverage>=7.6.9",
+    "freezegun>=1.5.1",
+    "mypy>=1.17.0",
+    "pytest>=8.3.4",
+    "pytest-asyncio>=0.25.2",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.9,<0.10.0"]
+build-backend = "uv_build"
