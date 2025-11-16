@@ -1,13 +1,13 @@
 [paths]
 source =
     src
-    /Users/runner/work/uv-secure/uv-secure/src
-    /home/runner/work/uv-secure/uv-secure/src
-    C:/a/uv-secure/uv-secure/src
-    D:/a/uv-secure/uv-secure/src
+    /Users/runner/work/aiomoto/aiomoto/src
+    /home/runner/work/aiomoto/aiomoto/src
+    C:/a/aiomoto/aiomoto/src
+    D:/a/aiomoto/aiomoto/src
 tests =
     tests
-    /Users/runner/work/uv-secure/uv-secure/tests
-    /home/runner/work/uv-secure/uv-secure/tests
-    C:/a/uv-secure/uv-secure/tests
-    D:/a/uv-secure/uv-secure/tests
+    /Users/runner/work/aiomoto/aiomoto/tests
+    /home/runner/work/aiomoto/aiomoto/tests
+    C:/a/aiomoto/aiomoto/tests
+    D:/a/aiomoto/aiomoto/tests
