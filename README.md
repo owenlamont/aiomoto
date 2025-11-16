@@ -38,7 +38,7 @@ tests run in.
 ## Roadmap
 
 This is early days and nothing in aiomoto is functional yet. I'd like to get services
-I personally use heavily like DynamoDb, S3 and some other more nice services working
+I personally use heavily like DynamoDb, S3 and some other more niche services working
 early. If that all goes well I'd welcome contributors to start adding support for other
 AWS services I don't personally use. I hope to be able to re-use much of motos automated
 tests for aiomoto too.
