@@ -1,15 +1,31 @@
 [project]
 name = "aiomoto"
-version = "0.1.0"
+version = "0.0.1"
 description = "Moto-style AWS service mocks for aiobotocore/aioboto3"
 readme = "README.md"
 authors = [
     { name = "Owen Lamont", email = "owenrlamont@gmail.com" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = [
     "aiobotocore==2.25.2",
     "moto==5.1.16",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Testing",
 ]
 
 [project.optional-dependencies]
