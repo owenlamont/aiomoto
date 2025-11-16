@@ -1,0 +1,54 @@
+name: Update Dependencies
+on:
+  schedule:
+    - cron: '30 8 * * 5'  # Friday 18:00 UTC+9:30
+  workflow_dispatch:
+
+jobs:
+  refresh-uv-lock:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - name: Set up Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: "3.9"
+      - name: Install uv
+        uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: Run uv lock upgrade
+        run: uv lock --upgrade
+      - name: Check for changes in uv.lock
+        id: check_diff
+        run: |
+          if git diff --quiet uv.lock; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Generate token
+        if: steps.check_diff.outputs.changed == 'true'
+        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42
+        id: generate-token
+        with:
+          app-id: ${{ secrets.AUTH_APP_CLIENT_ID }}
+          private-key: ${{ secrets.AUTH_APP_PRIVATE_KEY }}
+      - name: Create PR with updated uv.lock
+        if: steps.check_diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          commit-message: "chore: refresh uv.lock"
+          title: "chore: refresh uv.lock"
+          body: |
+            This PR updates `uv.lock` by running `uv lock --upgrade`.
+            It was triggered automatically (or manually) to keep transitive and unpinned dependencies up-to-date.
+          branch: bot/uv-lock-refresh
+          author: GitHub Actions <actions@github.com>
+          delete-branch: true

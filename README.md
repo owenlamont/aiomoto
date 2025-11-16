@@ -1,2 +1,3 @@
 # aiomoto
-Moto but for aiobotocore / aioboto3 (and sync boto3).
+
+`aiomoto` aims to be Moto for aiobotocore / aioboto3 (plus synchronous boto3).
