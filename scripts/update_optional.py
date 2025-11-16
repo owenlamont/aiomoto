@@ -16,8 +16,6 @@ path = Path("pyproject.toml")
 doc = tomlkit.parse(path.read_text())
 project = doc["project"]
 optional = project.setdefault("optional-dependencies", tomlkit.table())
-if "faster-async" not in optional:
-    optional["faster-async"] = tomlkit.array().multiline(False)
 extras = sorted(metadata.metadata("moto").get_all("Provides-Extra") or [])
 version = metadata.version("moto")
 for extra in extras:

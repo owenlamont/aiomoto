@@ -29,7 +29,6 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-faster-async = []
 acm = ["moto[acm]==5.1.16"]
 acmpca = ["moto[acmpca]==5.1.16"]
 all = ["moto[all]==5.1.16"]
