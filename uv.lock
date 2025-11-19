@@ -7,6 +7,18 @@ resolution-markers = [
 ]
 
 [[package]]
+name = "aioboto3"
+version = "7.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiobotocore", extra = ["boto3"] },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3b/5f/cf6de345760520907ab91573be61853552e6402d94fa781b09fa84ce3f42/aioboto3-7.0.0.tar.gz", hash = "sha256:84fc1ed0d456f2f0ff5626e5045bb9871461155aa9d91f44be0e3b1554e30552", size = 47935, upload-time = "2020-03-17T12:34:43.898Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5d/02/d2b8ec2172577329daec50b0e547ac68955e04983ae42367fe3ae8388229/aioboto3-7.0.0-py2.py3-none-any.whl", hash = "sha256:db3db4058115fe610e631d98fe90a6d98de55cc93da7d9f6ddab4a5f74b2ff0c", size = 28941, upload-time = "2020-03-17T12:34:42.138Z" },
+]
+
+[[package]]
 name = "aiobotocore"
 version = "2.25.2"
 source = { registry = "https://pypi.org/simple" }
@@ -22,6 +34,11 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/52/48/cf3c88c5e3fecdeed824f97a8a98a9fc0d7ef33e603f8f22c2fd32b9ef09/aiobotocore-2.25.2.tar.gz", hash = "sha256:ae0a512b34127097910b7af60752956254099ae54402a84c2021830768f92cda", size = 120585, upload-time = "2025-11-11T18:51:28.056Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8e/ad/a2f3964aa37da5a4c94c1e5f3934d6ac1333f991f675fcf08a618397a413/aiobotocore-2.25.2-py3-none-any.whl", hash = "sha256:0cec45c6ba7627dd5e5460337291c86ac38c3b512ec4054ce76407d0f7f2a48f", size = 86048, upload-time = "2025-11-11T18:51:26.139Z" },
+]
+
+[package.optional-dependencies]
+boto3 = [
+    { name = "boto3" },
 ]
 
 [[package]]
@@ -532,6 +549,7 @@ xray = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "aioboto3" },
     { name = "coverage" },
     { name = "freezegun" },
     { name = "mypy" },
@@ -669,6 +687,7 @@ provides-extras = ["acm", "acmpca", "all", "amp", "apigateway", "apigatewayv2", 
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "aioboto3", specifier = ">=7.0.0" },
     { name = "coverage", specifier = ">=7.6.9" },
     { name = "freezegun", specifier = ">=1.5.1" },
     { name = "mypy", specifier = ">=1.17.0" },
