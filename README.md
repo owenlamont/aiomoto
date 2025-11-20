@@ -35,6 +35,33 @@ worrying about port clashes or race conditions). In short I don't want any serve
 want aiomoto to support the moto like mock contexts in the same thread / process as the
 tests run in.
 
+## Usage
+
+Use `aiomoto.mock_aws()` as a drop-in replacement for Moto's `mock_aws` that works
+with both synchronous boto3/botocore clients and asynchronous aiobotocore/aioboto3
+clients in the same process. It supports `with` and `async with` (and may also
+decorate sync/async callables).
+
+```python
+import boto3
+from aiobotocore.session import AioSession
+from aiomoto import mock_aws
+
+async def demo():
+    async with mock_aws():
+        s3_sync = boto3.client("s3", region_name="us-east-1")
+        s3_sync.create_bucket(Bucket="example")
+
+        session = AioSession()
+        async with session.create_client("s3", region_name="us-east-1") as s3_async:
+            result = await s3_async.list_buckets()
+            assert any(b["Name"] == "example" for b in result["Buckets"])
+```
+
+While aiomoto is active it prevents aiobotocore from issuing real HTTP calls; any
+attempts fall back to Moto and will raise if they escape the stubber. Avoid mixing
+raw Moto decorators with aiomoto contexts in the same test to keep state aligned.
+
 ## Roadmap
 
 This is early days and nothing in aiomoto is functional yet. I'd like to get services
