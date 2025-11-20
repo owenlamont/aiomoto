@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
 import inspect
 from typing import Any, overload, TypeVar
@@ -12,6 +12,7 @@ from aiobotocore.awsrequest import AioAWSResponse
 from aiobotocore.endpoint import AioEndpoint
 from aiobotocore.session import AioSession
 from botocore.awsrequest import AWSResponse
+from botocore.compat import HTTPHeaders
 from moto.core.decorator import mock_aws as moto_mock_aws
 from moto.core.models import botocore_stubber, MockAWS
 
@@ -39,12 +40,11 @@ def _to_aio_response(response: AWSResponse) -> AioAWSResponse:
         AioAWSResponse carrying the same metadata and an async-readable body.
     """
 
-    return AioAWSResponse(
-        response.url,
-        response.status_code,
-        response.headers,
-        _AioBytesIOAdapter(response.raw),
-    )
+    headers_http = HTTPHeaders()
+    for key, value in response.headers.items():
+        headers_http.add_header(str(key), str(value))
+    raw_adapter = _AioBytesIOAdapter(response.raw)
+    return AioAWSResponse(response.url, response.status_code, headers_http, raw_adapter)
 
 
 class AioBotocorePatcher:
@@ -52,9 +52,9 @@ class AioBotocorePatcher:
 
     def __init__(self) -> None:
         self._active = False
-        self._original_convert: Callable[..., Awaitable[Any]] | None = None
-        self._original_send: Callable[..., Awaitable[Any]] | None = None
-        self._original_create_client: Callable[..., Awaitable[Any]] | None = None
+        self._original_convert: Any = None
+        self._original_send: Any = None
+        self._original_create_client: Any = None
 
     def start(self) -> None:
         """Activate aiobotocore patches and start Moto's mock context."""
@@ -105,7 +105,7 @@ class AioBotocorePatcher:
         if self._original_send is not None:
             return
 
-        self._original_send = AioEndpoint._send
+        self._original_send = AioEndpoint._send  # type: ignore[attr-defined]
 
         async def _guard_send(
             self: AioEndpoint, request: Any
@@ -115,11 +115,11 @@ class AioBotocorePatcher:
                 "aiomoto: attempted real HTTP request while mock_aws is active"
             )
 
-        AioEndpoint._send = _guard_send
+        AioEndpoint._send = _guard_send  # type: ignore[attr-defined]
 
     def _restore_send(self) -> None:
         if self._original_send is not None:
-            AioEndpoint._send = self._original_send
+            AioEndpoint._send = self._original_send  # type: ignore[attr-defined]
             self._original_send = None
 
     # client creation ----------------------------------------------------------
@@ -127,7 +127,7 @@ class AioBotocorePatcher:
         if self._original_create_client is not None:
             return
 
-        original_create_client = AioSession._create_client
+        original_create_client = AioSession._create_client  # type: ignore[attr-defined]
         self._original_create_client = original_create_client
 
         async def _create_client(
@@ -137,11 +137,11 @@ class AioBotocorePatcher:
             client.meta.events.register("before-send", botocore_stubber)
             return client
 
-        AioSession._create_client = _create_client
+        AioSession._create_client = _create_client  # type: ignore[attr-defined]
 
     def _restore_session_create(self) -> None:
         if self._original_create_client is not None:
-            AioSession._create_client = self._original_create_client
+            AioSession._create_client = self._original_create_client  # type: ignore[attr-defined]
             self._original_create_client = None
 
 
