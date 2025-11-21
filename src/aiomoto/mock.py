@@ -8,13 +8,17 @@ from contextlib import AbstractAsyncContextManager, AbstractContextManager
 import inspect
 from typing import Any, overload, TypeVar
 
+import aioboto3.session
 from aiobotocore.awsrequest import AioAWSResponse
 from aiobotocore.endpoint import AioEndpoint
+from aiobotocore.hooks import AioHierarchicalEmitter
 from aiobotocore.session import AioSession
 from botocore.awsrequest import AWSResponse
 from botocore.compat import HTTPHeaders
 from moto.core.decorator import mock_aws as moto_mock_aws
 from moto.core.models import botocore_stubber, MockAWS
+
+from aiomoto.aioboto3_patch import patch_aioboto3_resource, restore_aioboto3_resource
 
 
 T = TypeVar("T")
@@ -55,6 +59,8 @@ class AioBotocorePatcher:
         self._original_convert: Any = None
         self._original_send: Any = None
         self._original_create_client: Any = None
+        self._patched_aioboto3 = False
+        self._original_aio_emitter_emit: Any = None
 
     def start(self) -> None:
         """Activate aiobotocore patches and start Moto's mock context."""
@@ -64,11 +70,14 @@ class AioBotocorePatcher:
         self._patch_convert()
         self._patch_send()
         self._patch_session_create()
+        self._patch_aioboto3()
+        self._patch_aio_emitter_emit()
 
     def stop(self) -> None:
         """Undo patches and stop Moto's mock context."""
         if not self._active:
             return
+        self._restore_aioboto3()
         self._restore_session_create()
         self._restore_send()
         self._restore_convert()
@@ -143,6 +152,42 @@ class AioBotocorePatcher:
         if self._original_create_client is not None:
             AioSession._create_client = self._original_create_client  # type: ignore[attr-defined]
             self._original_create_client = None
+
+    # aioboto3 integration ----------------------------------------------------
+    def _patch_aioboto3(self) -> None:
+        if self._patched_aioboto3:
+            return
+        patch_aioboto3_resource(aioboto3.session)
+        self._patched_aioboto3 = True
+
+    def _restore_aioboto3(self) -> None:
+        if not self._patched_aioboto3:
+            return
+        restore_aioboto3_resource(aioboto3.session)
+        self._patched_aioboto3 = False
+
+    def _patch_aio_emitter_emit(self) -> None:
+        if self._original_aio_emitter_emit is not None:
+            return
+        self._original_aio_emitter_emit = AioHierarchicalEmitter.emit
+
+        def _emit_wrapped(
+            self: AioHierarchicalEmitter, event_name: str, **kwargs: Any
+        ) -> Any:
+            coro = self._emit(event_name, kwargs, stop_on_response=False)  # type: ignore[attr-defined]
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                return asyncio.get_event_loop().run_until_complete(coro)
+            else:
+                return loop.create_task(coro)
+
+        AioHierarchicalEmitter.emit = _emit_wrapped  # type: ignore[assignment,method-assign]
+
+    def _restore_aio_emitter_emit(self) -> None:
+        if self._original_aio_emitter_emit is not None:
+            AioHierarchicalEmitter.emit = self._original_aio_emitter_emit  # type: ignore[method-assign]
+            self._original_aio_emitter_emit = None
 
 
 class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
