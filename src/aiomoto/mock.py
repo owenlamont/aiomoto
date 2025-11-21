@@ -8,7 +8,11 @@ from contextlib import AbstractAsyncContextManager, AbstractContextManager
 import inspect
 from typing import Any, overload, TypeVar
 
-import aioboto3.session
+
+try:  # aioboto3 is optional
+    import aioboto3.session as aioboto3_session
+except ImportError:  # pragma: no cover
+    aioboto3_session = None
 from aiobotocore.awsrequest import AioAWSResponse
 from aiobotocore.endpoint import AioEndpoint
 from aiobotocore.hooks import AioHierarchicalEmitter
@@ -155,15 +159,15 @@ class AioBotocorePatcher:
 
     # aioboto3 integration ----------------------------------------------------
     def _patch_aioboto3(self) -> None:
-        if self._patched_aioboto3:
+        if self._patched_aioboto3 or aioboto3_session is None:
             return
-        patch_aioboto3_resource(aioboto3.session)
+        patch_aioboto3_resource(aioboto3_session)
         self._patched_aioboto3 = True
 
     def _restore_aioboto3(self) -> None:
-        if not self._patched_aioboto3:
+        if not self._patched_aioboto3 or aioboto3_session is None:
             return
-        restore_aioboto3_resource(aioboto3.session)
+        restore_aioboto3_resource(aioboto3_session)
         self._patched_aioboto3 = False
 
     def _patch_aio_emitter_emit(self) -> None:
