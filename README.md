@@ -6,6 +6,8 @@ mock both asynchronous and synchronous service clients with consistent state bet
 both, i.e. I want you to be able to synchronously write a file to a mock S3 bucket with
 boto3 and asynchronously read the same file back again using aioboto3 or aiobotocore.
 
+For the evolving project roadmap, see the wiki: <https://github.com/owenlamont/aiomoto/wiki/Roadmap>
+
 ## Motivation
 
 Like many others I've wanted to use Moto with aiobotocore and aioboto3 but found that
@@ -34,6 +36,33 @@ like dynamodb-local in-memory and I also wanted to run tests in parallel without
 worrying about port clashes or race conditions). In short I don't want any server and I
 want aiomoto to support the moto like mock contexts in the same thread / process as the
 tests run in.
+
+## Usage
+
+Use `aiomoto.mock_aws()` as a drop-in replacement for Moto's `mock_aws` that works
+with both synchronous boto3/botocore clients and asynchronous aiobotocore/aioboto3
+clients in the same process. It supports `with` and `async with` (and may also
+decorate sync/async callables).
+
+```python
+import boto3
+from aiobotocore.session import AioSession
+from aiomoto import mock_aws
+
+async def demo():
+    async with mock_aws():
+        s3_sync = boto3.client("s3", region_name="us-east-1")
+        s3_sync.create_bucket(Bucket="example")
+
+        session = AioSession()
+        async with session.create_client("s3", region_name="us-east-1") as s3_async:
+            result = await s3_async.list_buckets()
+            assert any(b["Name"] == "example" for b in result["Buckets"])
+```
+
+While aiomoto is active it prevents aiobotocore from issuing real HTTP calls; any
+attempts fall back to Moto and will raise if they escape the stubber. Avoid mixing
+raw Moto decorators with aiomoto contexts in the same test to keep state aligned.
 
 ## Roadmap
 
