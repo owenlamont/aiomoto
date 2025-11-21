@@ -1,31 +1,17 @@
-"""Async-capable Moto context and aiobotocore patching helpers."""
+"""Core aiobotocore/Moto patching routines."""
 
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
-from contextlib import AbstractAsyncContextManager, AbstractContextManager
-import inspect
-from typing import Any, overload, TypeVar
+from typing import Any
 
-
-try:  # aioboto3 is optional
-    import aioboto3.session as aioboto3_session
-except ImportError:  # pragma: no cover
-    aioboto3_session = None
 from aiobotocore.awsrequest import AioAWSResponse
 from aiobotocore.endpoint import AioEndpoint
 from aiobotocore.hooks import AioHierarchicalEmitter
 from aiobotocore.session import AioSession
 from botocore.awsrequest import AWSResponse
 from botocore.compat import HTTPHeaders
-from moto.core.decorator import mock_aws as moto_mock_aws
-from moto.core.models import botocore_stubber, MockAWS
-
-from aiomoto.aioboto3_patch import patch_aioboto3_resource, restore_aioboto3_resource
-
-
-T = TypeVar("T")
+from moto.core.models import botocore_stubber
 
 
 class _AioBytesIOAdapter:
@@ -42,50 +28,39 @@ class _AioBytesIOAdapter:
 
 
 def _to_aio_response(response: AWSResponse) -> AioAWSResponse:
-    """Convert Moto's synchronous AWSResponse into an awaitable variant.
-
-    Returns:
-        AioAWSResponse carrying the same metadata and an async-readable body.
-    """
-
     headers_http = HTTPHeaders()
     for key, value in response.headers.items():
         headers_http.add_header(str(key), str(value))
-    raw_adapter = _AioBytesIOAdapter(response.raw)
-    return AioAWSResponse(response.url, response.status_code, headers_http, raw_adapter)
+    return AioAWSResponse(
+        response.url,
+        response.status_code,
+        headers_http,
+        _AioBytesIOAdapter(response.raw),
+    )
 
 
-class AioBotocorePatcher:
-    """Apply minimal aiobotocore patches for Moto interoperability."""
+class CorePatcher:
+    """Patch aiobotocore endpoints + emitters to route through Moto."""
 
     def __init__(self) -> None:
-        self._active = False
         self._original_convert: Any = None
         self._original_send: Any = None
         self._original_create_client: Any = None
-        self._patched_aioboto3 = False
         self._original_aio_emitter_emit: Any = None
 
     def start(self) -> None:
-        """Activate aiobotocore patches and start Moto's mock context."""
-        if self._active:
-            return
-        self._active = True
+        """Apply all core patches."""
         self._patch_convert()
         self._patch_send()
         self._patch_session_create()
-        self._patch_aioboto3()
         self._patch_aio_emitter_emit()
 
     def stop(self) -> None:
-        """Undo patches and stop Moto's mock context."""
-        if not self._active:
-            return
-        self._restore_aioboto3()
+        """Restore all core patches."""
         self._restore_session_create()
         self._restore_send()
         self._restore_convert()
-        self._active = False
+        self._restore_aio_emitter_emit()
 
     # convert_to_response_dict -------------------------------------------------
     def _patch_convert(self) -> None:
@@ -120,10 +95,8 @@ class AioBotocorePatcher:
 
         self._original_send = AioEndpoint._send  # type: ignore[attr-defined]
 
-        async def _guard_send(
-            self: AioEndpoint, request: Any
-        ) -> Any:  # pragma: no cover - executed via tests
-            await asyncio.sleep(0)  # Ensure function remains awaitable for linting
+        async def _guard_send(self: AioEndpoint, request: Any) -> Any:
+            await asyncio.sleep(0)
             raise RuntimeError(
                 "aiomoto: attempted real HTTP request while mock_aws is active"
             )
@@ -157,19 +130,7 @@ class AioBotocorePatcher:
             AioSession._create_client = self._original_create_client  # type: ignore[attr-defined]
             self._original_create_client = None
 
-    # aioboto3 integration ----------------------------------------------------
-    def _patch_aioboto3(self) -> None:
-        if self._patched_aioboto3 or aioboto3_session is None:
-            return
-        patch_aioboto3_resource(aioboto3_session)
-        self._patched_aioboto3 = True
-
-    def _restore_aioboto3(self) -> None:
-        if not self._patched_aioboto3 or aioboto3_session is None:
-            return
-        restore_aioboto3_resource(aioboto3_session)
-        self._patched_aioboto3 = False
-
+    # emitter bridging ---------------------------------------------------------
     def _patch_aio_emitter_emit(self) -> None:
         if self._original_aio_emitter_emit is not None:
             return
@@ -192,89 +153,3 @@ class AioBotocorePatcher:
         if self._original_aio_emitter_emit is not None:
             AioHierarchicalEmitter.emit = self._original_aio_emitter_emit  # type: ignore[method-assign]
             self._original_aio_emitter_emit = None
-
-
-class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
-    """Moto context usable from both sync and async code."""
-
-    def __init__(self, reset: bool = True, remove_data: bool = True) -> None:
-        self._reset = reset
-        self._remove_data = remove_data
-        self._moto_context: MockAWS = moto_mock_aws()
-        self._patcher = AioBotocorePatcher()
-        self._started = False
-
-    def start(self, reset: bool | None = None) -> None:
-        if self._started:
-            self._moto_context.start(reset=reset if reset is not None else self._reset)
-            return
-        self._patcher.start()
-        self._moto_context.start(reset=reset if reset is not None else self._reset)
-        self._started = True
-
-    def stop(self, remove_data: bool | None = None) -> None:
-        if not self._started:
-            return
-        self._moto_context.stop(
-            remove_data=remove_data if remove_data is not None else self._remove_data
-        )
-        self._patcher.stop()
-        self._started = False
-
-    # Sync context protocol ----------------------------------------------------
-    def __enter__(self) -> _MotoAsyncContext:
-        self.start()
-        return self
-
-    def __exit__(self, *args: Any) -> None:
-        self.stop()
-
-    # Async context protocol ---------------------------------------------------
-    async def __aenter__(self) -> _MotoAsyncContext:
-        self.start()
-        return self
-
-    async def __aexit__(self, *args: Any) -> None:
-        self.stop()
-
-    # Decorator behaviour ------------------------------------------------------
-    def __call__(
-        self, func: Callable[..., T], reset: bool = True, remove_data: bool = True
-    ) -> Callable[..., T]:
-        if inspect.iscoroutinefunction(func):
-
-            async def _async_wrapper(*args: Any, **kwargs: Any) -> Any:
-                async with _MotoAsyncContext(reset=reset, remove_data=remove_data):
-                    return await func(*args, **kwargs)
-
-            return _async_wrapper  # type: ignore[return-value]
-
-        def _sync_wrapper(*args: Any, **kwargs: Any) -> Any:
-            with _MotoAsyncContext(reset=reset, remove_data=remove_data):
-                return func(*args, **kwargs)
-
-        return _sync_wrapper
-
-
-@overload
-def mock_aws(func: Callable[..., T]) -> Callable[..., T]: ...
-
-
-@overload
-def mock_aws(func: None = None) -> _MotoAsyncContext:  # pragma: no cover - overload
-    ...
-
-
-def mock_aws(
-    func: Callable[..., T] | None = None,
-) -> _MotoAsyncContext | Callable[..., T]:
-    """Return a Moto-backed context that also patches aiobotocore.
-
-    Mirrors Moto's ``mock_aws``: call without arguments for a context manager or
-    decorate sync/async callables directly.
-    """
-
-    ctx = _MotoAsyncContext()
-    if func is None:
-        return ctx
-    return ctx(func)

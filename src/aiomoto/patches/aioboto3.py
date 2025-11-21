@@ -161,3 +161,28 @@ def restore_aioboto3_resource(session_mod: Any) -> None:
     orig = getattr(session_mod.Session, "_aiomoto_resource_orig", None)
     if orig is not None:
         session_mod.Session.resource = orig
+
+
+class Aioboto3Patcher:
+    """Patch aioboto3 session to support async resources."""
+
+    def __init__(self, session_mod: Any) -> None:
+        self._session_mod = session_mod
+        self._patched = False
+
+    def start(self) -> None:
+        """Apply aioboto3 resource patch if not already applied."""
+        if self._patched:
+            return
+        patch_aioboto3_resource(self._session_mod)
+        self._patched = True
+
+    def stop(self) -> None:
+        """Restore aioboto3 resource if previously patched."""
+        if not self._patched:
+            return
+        restore_aioboto3_resource(self._session_mod)
+        self._patched = False
+
+
+__all__ = ["Aioboto3Patcher", "patch_aioboto3_resource", "restore_aioboto3_resource"]
