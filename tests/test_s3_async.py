@@ -52,6 +52,36 @@ async def test_sync_boto3_to_async_aioboto3_visibility() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip(
+    reason=(
+        "aioboto3.resource currently expects a sync client; aiomoto does not yet "
+        "supply one"
+    )
+)
+async def test_resource_visibility_between_sync_and_async() -> None:
+    with mock_aws():
+        # sync create via resource
+        s3_res_sync = boto3.resource("s3", region_name=AWS_REGION)
+        s3_res_sync.create_bucket(Bucket="res-sync")
+
+        async with aioboto3.Session().resource(
+            "s3", region_name=AWS_REGION
+        ) as s3_res_async:
+            names = [bucket.name async for bucket in s3_res_async.buckets.all()]
+            assert "res-sync" in names
+
+        # async create via resource
+        async with aioboto3.Session().resource(
+            "s3", region_name=AWS_REGION
+        ) as s3_res_async:
+            bucket = await s3_res_async.Bucket("res-async")
+            await bucket.create()
+
+        bucket_names_sync = [bucket.name for bucket in s3_res_sync.buckets.all()]
+        assert "res-async" in bucket_names_sync
+
+
+@pytest.mark.asyncio
 async def test_missing_bucket_raises_client_error() -> None:
     with mock_aws():
         session = AioSession()

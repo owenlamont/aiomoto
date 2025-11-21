@@ -23,6 +23,8 @@ boto3. The focus is a clean, reusable library API rather than a CLI entry point.
 - **/src/aiomoto/** – Library code.
 - **/tests/** – Pytest suite kept in sync with the src layout; module names mirror
   the src module they cover and use the `test_` prefix.
+- **Wiki** – <https://github.com/owenlamont/aiomoto/wiki> (roadmap, etc.). Keep wiki
+  pages in sync when behaviour changes.
 - **.complexipy.toml** – Complexipy configuration.
 - **.coveragerc** – Coverage path mappings.
 - **mypy.ini** – MyPy type checker configuration.
@@ -57,6 +59,8 @@ boto3. The focus is a clean, reusable library API rather than a CLI entry point.
   signature alone is not clear. Comments should be saved for unavoidable code smells,
   temporary pins (with links), or opaque logic.
 - Keep imports at the top of modules unless a circular import would result.
+- Prefer quick research (docs or web search) to validate tools/APIs before
+  trial-and-error patches; it is usually faster and reduces churn.
 
 ## Development Environment / Terminal
 

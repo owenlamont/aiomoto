@@ -32,6 +32,7 @@ classifiers = [
 acm = ["moto[acm]==5.1.16"]
 acmpca = ["moto[acmpca]==5.1.16"]
 all = ["moto[all]==5.1.16"]
+aioboto3 = ["aioboto3>=7.0.0"]
 amp = ["moto[amp]==5.1.16"]
 apigateway = ["moto[apigateway]==5.1.16"]
 apigatewayv2 = ["moto[apigatewayv2]==5.1.16"]
