@@ -36,7 +36,8 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    result = compute_ratio(Path(__file__).resolve().parents[2])
+    repo_root = Path(__file__).resolve().parent.parent
+    result = compute_ratio(repo_root)
     if args.format == "json":
         import json
 
