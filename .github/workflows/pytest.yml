@@ -27,11 +27,15 @@ jobs:
         run: uv sync
       - name: Run tests with Coverage
         run: uv run pytest tests --cov=. --cov-branch --cov-report=term
+      - name: Record test/src size ratio
+        run: uv run python scripts/size_ratio.py > ratio.txt
       - name: Upload coverage artifact
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
           name: coverage-${{ matrix.os }}-python-${{ matrix.python-version }}
-          path: .coverage
+          path: |
+            .coverage
+            ratio.txt
           include-hidden-files: true
   combine-and-comment:
     runs-on: ubuntu-latest
@@ -59,11 +63,26 @@ jobs:
           set -o pipefail
           uv run coverage combine coverage/*-python-*/.coverage
           uv run coverage report | tee coverage_summary.txt
+      - name: Compute mean test/src ratio
+        run: |
+          ratios=$(find coverage -name "ratio.txt" -maxdepth 2 -type f)
+          sum=0
+          count=0
+          for file in $ratios; do
+            val=$(awk '{print $3}' "$file")
+            sum=$(python - <<'PY'\nimport sys\ns=float(sys.argv[1]); a=float(sys.argv[2]); print(s+a)\nPY "$sum" "$val")
+            count=$((count+1))
+          done
+          mean=$(python - <<'PY'\nimport sys\ns=float(sys.argv[1]); c=int(sys.argv[2]);\nprint(0 if c==0 else s/c)\nPY "$sum" "$count")
+          printf "Mean tests/src ratio across matrix: %.3f\n" "$mean" | tee ratio_summary.txt
       - name: Prepare Comment Body
         run: |
           echo '### Coverage Report' >> comment_body.md
           echo '```txt' >> comment_body.md
           cat coverage_summary.txt >> comment_body.md
+          echo '' >> comment_body.md
+          echo 'Mean tests/src ratio across matrix:' >> comment_body.md
+          cat ratio_summary.txt >> comment_body.md
           echo '' >> comment_body.md
           echo '```' >> comment_body.md
       - name: Find Coverage Report Comment
