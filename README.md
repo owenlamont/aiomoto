@@ -13,6 +13,9 @@ aiobotocore or aioboto3 in the same process.
 - S3 listings (client + resource) keep key names intact, including odd byte sequences,
   prefixes with `Delimiter` and `EncodingType=url`, while preserving headers needed by
   aiobotocore parsers.
+- DynamoDB table create/describe and put/get flows through aiobotocore/aioboto3
+  clients/resources while boto3 sees the same regional backends, including
+  missing-table errors.
 
 For the evolving project roadmap, see the wiki: <https://github.com/owenlamont/aiomoto/wiki/Roadmap>
 
