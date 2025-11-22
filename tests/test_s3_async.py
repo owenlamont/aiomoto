@@ -178,3 +178,58 @@ async def test_resource_streaming_body_iteration() -> None:
 
         sync_resp = s3_sync.get_object(Bucket="stream-bucket", Key="stream-key")
         assert sync_resp["Body"].read() == b"chunk-onechunk-two"
+
+
+@pytest.mark.asyncio
+async def test_async_client_listing_preserves_key_names() -> None:
+    with mock_aws():
+        s3_sync = boto3.client("s3", region_name=AWS_REGION)
+        s3_sync.create_bucket(Bucket="list-bucket")
+
+        odd_key = "6T7\x159\x12\r\x08.txt"
+
+        session = AioSession()
+        async with session.create_client("s3", region_name=AWS_REGION) as s3_async:
+            await s3_async.put_object(Bucket="list-bucket", Key=odd_key, Body=b"")
+
+            resp = await s3_async.list_objects(Bucket="list-bucket")
+            assert resp["Contents"][0]["Key"] == odd_key
+
+            resp_v2 = await s3_async.list_objects_v2(Bucket="list-bucket")
+            assert resp_v2["Contents"][0]["Key"] == odd_key
+
+        # boto3 should see the same object name to confirm shared Moto state
+        sync_key = s3_sync.list_objects(Bucket="list-bucket")["Contents"][0]["Key"]
+        assert sync_key == odd_key
+
+
+@pytest.mark.asyncio
+async def test_async_listing_with_prefix_and_encoding_type() -> None:
+    with mock_aws():
+        s3_sync = boto3.client("s3", region_name=AWS_REGION)
+        s3_sync.create_bucket(Bucket="prefix-bucket")
+
+        name = "example/file.text"
+
+        async with aioboto3.Session().resource(
+            "s3", region_name=AWS_REGION
+        ) as s3_res_async:
+            obj = s3_res_async.Object("prefix-bucket", name)
+            await obj.put(Body=b"")
+
+        session = AioSession()
+        async with session.create_client("s3", region_name=AWS_REGION) as s3_async:
+            resp = await s3_async.list_objects(
+                Bucket="prefix-bucket",
+                Prefix="example/",
+                Delimiter="/",
+                MaxKeys=1,
+                EncodingType="url",
+            )
+
+        assert resp["EncodingType"] == "url"
+        assert resp["Contents"][0]["Key"] == name
+
+        # boto3 client should see the same key name
+        sync_key = s3_sync.list_objects(Bucket="prefix-bucket")["Contents"][0]["Key"]
+        assert sync_key == name
