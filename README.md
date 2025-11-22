@@ -55,8 +55,36 @@ tests run in.
 
 Use `aiomoto.mock_aws()` as a drop-in replacement for Moto's `mock_aws` that works
 with both synchronous boto3/botocore clients and asynchronous aiobotocore/aioboto3
-clients in the same process. It supports `with` and `async with` (and may also
-decorate sync/async callables).
+clients in the same process. It supports `with` and `async with` (and can decorate
+sync/async callables).
+
+### Use as a decorator
+
+Use `@mock_aws()` as a decorator when you want Moto started/stopped for the span of
+a test function. Both sync and async callables are supported. `mock_aws_decorator`
+is also exported for teams that prefer an explicitly decorator-only name (or want
+to preconfigure `reset` / `remove_data` once and reuse it) while leaving `mock_aws`
+for context-manager usage.
+
+```python
+import boto3
+from aiobotocore.session import AioSession
+from aiomoto import mock_aws, mock_aws_decorator
+
+
+@mock_aws()
+def test_sync_bucket() -> None:
+    client = boto3.client("s3", region_name="us-east-1")
+    client.create_bucket(Bucket="decorator-demo")
+
+
+@mock_aws_decorator()
+async def test_async_bucket() -> None:
+    async with AioSession().create_client("s3", region_name="us-east-1") as client:
+        await client.create_bucket(Bucket="decorator-demo")
+```
+
+### Use as a context manager
 
 ```python
 import boto3

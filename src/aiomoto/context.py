@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Coroutine
 from contextlib import AbstractAsyncContextManager, AbstractContextManager
-from typing import Any
+from functools import wraps
+import inspect
+from typing import Any, no_type_check, overload, ParamSpec, TypeVar
 
 
 try:
@@ -16,6 +19,11 @@ from moto.core.models import MockAWS
 
 from aiomoto.patches.aioboto3 import Aioboto3Patcher
 from aiomoto.patches.core import CorePatcher
+
+
+P = ParamSpec("P")
+R = TypeVar("R")
+RA = TypeVar("RA")
 
 
 class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
@@ -65,3 +73,55 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
 
     async def __aexit__(self, *args: Any) -> None:
         self.stop()
+
+    # Decorator protocol ------------------------------------------------------
+    @overload
+    def __call__(
+        self, func: Callable[P, Coroutine[Any, Any, RA]]
+    ) -> Callable[P, Coroutine[Any, Any, RA]]: ...
+
+    @overload
+    def __call__(self, func: Callable[P, R]) -> Callable[P, R]: ...
+
+    @no_type_check
+    def __call__(self, func: Callable[P, object]) -> Callable[P, object]:
+        """Allow ``@mock_aws()`` on sync or async callables.
+
+        The same context instance wraps each invocation, starting Moto before the
+        function runs and stopping it afterwards. This keeps decorator semantics in
+        line with the context manager without duplicating state handling.
+
+        Returns:
+            A callable that executes the wrapped function inside the mock context.
+        """
+
+        if inspect.iscoroutinefunction(func):
+            async_func = func
+
+            @wraps(func)
+            async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> object:
+                async with self:
+                    return await async_func(*args, **kwargs)
+
+            return async_wrapper
+
+        sync_func = func
+
+        @wraps(sync_func)
+        def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> object:
+            with self:
+                return sync_func(*args, **kwargs)
+
+        return sync_wrapper
+
+
+def mock_aws_decorator(
+    *, reset: bool = True, remove_data: bool = True
+) -> _MotoAsyncContext:
+    """Return a decorator that wraps callables in ``mock_aws``.
+
+    This is a convenience factory that mirrors Moto's ``@mock_aws`` decorator while
+    reusing the shared async-aware context manager.
+    """
+
+    return _MotoAsyncContext(reset=reset, remove_data=remove_data)
