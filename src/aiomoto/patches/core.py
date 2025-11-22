@@ -43,8 +43,6 @@ class _AioBytesIOAdapter:
         return int(length) if isinstance(length, int) else None
 
     def _update_eof(self, read_len: int) -> None:
-        if read_len == 0:
-            self._eof = True
         if self._length is not None and hasattr(self._raw, "tell"):
             with contextlib.suppress(Exception):  # pragma: no cover - defensive
                 self._eof = self._raw.tell() >= self._length
