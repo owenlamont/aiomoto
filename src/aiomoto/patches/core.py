@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+from inspect import iscoroutinefunction
 from typing import Any
 
 from aiobotocore.awsrequest import AioAWSResponse
@@ -15,16 +17,90 @@ from moto.core.models import botocore_stubber
 
 
 class _AioBytesIOAdapter:
-    """Async wrapper around Moto's in-memory response body."""
+    """Async wrapper around Moto's in-memory response body.
 
-    def __init__(self, raw: Any) -> None:
+    The adapter exposes the minimal surface that aiobotocore's StreamingBody
+    expects from an aiohttp.ClientResponse: a ``content.read`` coroutine,
+    ``at_eof`` helper, and ``url`` attribute. ``content`` points back to the
+    adapter to mirror aiohttp's layout.
+    """
+
+    def __init__(self, raw: Any, url: str) -> None:
         self._raw = raw
+        self.url = url
+        self.content = self  # StreamingBody calls ``raw.content.read``.
+        self._length = self._infer_length()
+        self._eof = False
 
-    async def read(
-        self, amt: int | None = None
-    ) -> bytes:  # pragma: no cover - thin adapter
+    def _infer_length(self) -> int | None:
+        if hasattr(self._raw, "getbuffer"):
+            with contextlib.suppress(Exception):  # pragma: no cover - defensive
+                return len(self._raw.getbuffer())
+        if hasattr(self._raw, "__len__"):
+            with contextlib.suppress(Exception):  # pragma: no cover - defensive
+                return len(self._raw)
+        length = getattr(self._raw, "len", None)
+        return int(length) if isinstance(length, int) else None
+
+    def _update_eof(self, read_len: int) -> None:
+        if read_len == 0:
+            self._eof = True
+        if self._length is not None and hasattr(self._raw, "tell"):
+            with contextlib.suppress(Exception):  # pragma: no cover - defensive
+                self._eof = self._raw.tell() >= self._length
+
+    def at_eof(self) -> bool:
+        self._update_eof(0)
+        return self._eof
+
+    async def read(self, amt: int | None = None) -> bytes:
         data = self._raw.read() if amt is None else self._raw.read(amt)
-        return data or b""
+        if data is None:
+            data = b""
+        if isinstance(data, bytes):
+            data_bytes = data
+        elif isinstance(data, bytearray):
+            data_bytes = bytes(data)
+        else:
+            data_bytes = bytes(data)
+        self._update_eof(len(data_bytes))
+        return data_bytes
+
+
+async def _materialize_request_body(request: Any) -> None:
+    """Resolve coroutine bodies used by aiobotocore into raw bytes for Moto."""
+
+    body = getattr(request, "body", None)
+    body_bytes: bytes | None = None
+
+    if asyncio.iscoroutine(body):
+        body_bytes = await body
+    else:
+        read_fn = getattr(body, "read", None)
+        if read_fn and iscoroutinefunction(read_fn):
+            body_bytes = await read_fn()
+
+    if body_bytes is not None:
+        request.body = body_bytes
+
+
+def _wrap_stubber_handler(original_handler: Any) -> Any:
+    """Create an async before-send handler that normalises responses for Moto.
+
+    Returns:
+        Callable[..., Awaitable[Any]]: handler compatible with aiobotocore events.
+    """
+
+    async def _stubber(event_name: str, request: Any, **kwargs: Any) -> Any:
+        await _materialize_request_body(request)
+        response = original_handler(event_name, request, **kwargs)
+        if isinstance(response, AWSResponse) and not isinstance(
+            response, AioAWSResponse
+        ):
+            return _to_aio_response(response)
+        return response
+
+    return _stubber
 
 
 def _to_aio_response(response: AWSResponse) -> AioAWSResponse:
@@ -35,7 +111,7 @@ def _to_aio_response(response: AWSResponse) -> AioAWSResponse:
         response.url,
         response.status_code,
         headers_http,
-        _AioBytesIOAdapter(response.raw),
+        _AioBytesIOAdapter(response.raw, response.url),
     )
 
 
@@ -120,7 +196,13 @@ class CorePatcher:
             session_self: AioSession, *args: Any, **kwargs: Any
         ) -> Any:
             client = await original_create_client(session_self, *args, **kwargs)
-            client.meta.events.register("before-send", botocore_stubber)
+
+            with contextlib.suppress(Exception):
+                client.meta.events.unregister("before-send", botocore_stubber)
+
+            client.meta.events.register(
+                "before-send", _wrap_stubber_handler(botocore_stubber)
+            )
             return client
 
         AioSession._create_client = _create_client  # type: ignore[attr-defined]
