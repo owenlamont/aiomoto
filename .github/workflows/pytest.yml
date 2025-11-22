@@ -93,7 +93,6 @@ jobs:
           echo '```txt' >> comment_body.md
           cat coverage_summary.txt >> comment_body.md
           echo '' >> comment_body.md
-          echo 'Mean tests/src ratio across matrix:' >> comment_body.md
           cat ratio_summary.txt >> comment_body.md
           echo '' >> comment_body.md
           echo '```' >> comment_body.md
