@@ -1,6 +1,6 @@
 [project]
 name = "aiomoto"
-version = "0.0.1"
+version = "0.0.2"
 description = "Moto-style AWS service mocks for aiobotocore/aioboto3"
 readme = "README.md"
 authors = [
@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "aiobotocore==2.25.2",
+    "aiobotocore==2.25.1",
     "moto==5.1.16",
 ]
 classifiers = [
@@ -34,7 +34,7 @@ classifiers = [
 acm = ["moto[acm]==5.1.16"]
 acmpca = ["moto[acmpca]==5.1.16"]
 all = ["moto[all]==5.1.16"]
-aioboto3 = ["aioboto3>=7.0.0"]
+aioboto3 = ["aioboto3>=15.5.0"]
 amp = ["moto[amp]==5.1.16"]
 apigateway = ["moto[apigateway]==5.1.16"]
 apigatewayv2 = ["moto[apigatewayv2]==5.1.16"]
@@ -154,7 +154,8 @@ xray = ["moto[xray]==5.1.16"]
 
 [dependency-groups]
 dev = [
-    "aioboto3>=7.0.0",
+    "aioboto3>=15.5.0",
+    "types-aioboto3[full]==15.5.0",
     "boto3-stubs[s3]==1.40.70",
     "coverage>=7.6.9",
     "freezegun>=1.5.1",
@@ -163,7 +164,7 @@ dev = [
     "pytest-asyncio>=0.25.2",
     "pytest-cov>=6.0.0",
     "pytest-mock>=3.14.0",
-    "types-aiobotocore[s3]==2.25.2",
+    "types-aiobotocore[full]==2.25.1",
 ]
 
 [build-system]

@@ -9,7 +9,7 @@ from typing import Any
 try:
     import aioboto3.session as aioboto3_session
 except ImportError:  # pragma: no cover
-    aioboto3_session = None
+    aioboto3_session = None  # type: ignore[assignment]
 
 from moto.core.decorator import mock_aws as moto_mock_aws
 from moto.core.models import MockAWS

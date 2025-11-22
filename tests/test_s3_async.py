@@ -68,7 +68,7 @@ async def test_resource_visibility_between_sync_and_async() -> None:
         async with aioboto3.Session().resource(
             "s3", region_name=AWS_REGION
         ) as s3_res_async:
-            bucket = s3_res_async.Bucket("res-async")
+            bucket = await s3_res_async.Bucket("res-async")
             await bucket.create()
 
         bucket_names_sync = [bucket.name for bucket in s3_res_sync.buckets.all()]
@@ -152,7 +152,7 @@ async def test_sync_put_visible_to_async_clients_and_resources() -> None:
         async with aioboto3.Session().resource(
             "s3", region_name=AWS_REGION
         ) as s3_res_async:
-            obj = s3_res_async.Object("sync-to-async", "hello.txt")
+            obj = await s3_res_async.Object("sync-to-async", "hello.txt")
             fetched = await obj.get()
             assert await fetched["Body"].read() == b"sync-wrote-this"
 
@@ -166,7 +166,7 @@ async def test_resource_streaming_body_iteration() -> None:
         async with aioboto3.Session().resource(
             "s3", region_name=AWS_REGION
         ) as s3_resource:
-            obj = s3_resource.Object("stream-bucket", "stream-key")
+            obj = await s3_resource.Object("stream-bucket", "stream-key")
             await obj.put(Body=b"chunk-onechunk-two")
 
             resp = await obj.get()
@@ -214,7 +214,7 @@ async def test_async_listing_with_prefix_and_encoding_type() -> None:
         async with aioboto3.Session().resource(
             "s3", region_name=AWS_REGION
         ) as s3_res_async:
-            obj = s3_res_async.Object("prefix-bucket", name)
+            obj = await s3_res_async.Object("prefix-bucket", name)
             await obj.put(Body=b"")
 
         session = AioSession()

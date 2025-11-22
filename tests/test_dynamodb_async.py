@@ -109,17 +109,15 @@ async def test_aioboto3_resource_supports_sort_keys_and_indexes() -> None:
             )
             await table.put_item(
                 Item={
-                    "pk": {"S": "parent"},
-                    "sk": {"S": "0001"},
-                    "lsi_sk": {"S": "alt"},
-                    "gsi_pk": {"S": "g-1"},
-                    "payload": {"S": "v1"},
+                    "pk": "parent",
+                    "sk": "0001",
+                    "lsi_sk": "alt",
+                    "gsi_pk": "g-1",
+                    "payload": "v1",
                 }
             )
-            item = await table.get_item(
-                Key={"pk": {"S": "parent"}, "sk": {"S": "0001"}}
-            )
-            assert item["Item"]["payload"]["S"] == "v1"
+            item = await table.get_item(Key={"pk": "parent", "sk": "0001"})
+            assert item["Item"]["payload"] == "v1"
 
         sync = boto3.client("dynamodb", region_name=AWS_REGION)
         desc = sync.describe_table(TableName="complex")["Table"]
@@ -167,6 +165,6 @@ async def test_sync_put_visible_to_async_resource() -> None:
         async with aioboto3.Session().resource(
             "dynamodb", region_name=AWS_REGION
         ) as dynamodb:
-            table = dynamodb.Table("bridge-res")
-            item = await table.get_item(Key={"pk": {"S": "sync-val"}})
-            assert item["Item"]["pk"]["S"] == "sync-val"
+            table = await dynamodb.Table("bridge-res")
+            item = await table.get_item(Key={"pk": "sync-val"})
+            assert item["Item"]["pk"] == "sync-val"

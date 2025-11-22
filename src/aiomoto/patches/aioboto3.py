@@ -62,16 +62,16 @@ class ResourceCreatorContext:
         original_emitter = getattr(factory, "_emitter", None)
 
         class _SyncEmitter:
-            def emit(self, *args: Any, **kwargs: Any) -> list[Any]:
+            async def emit(self, *args: Any, **kwargs: Any) -> list[Any]:
                 return []
 
-            def emit_until_response(
+            async def emit_until_response(
                 self, *args: Any, **kwargs: Any
             ) -> tuple[Any | None, Any | None]:  # pragma: no cover - defensive
                 return None, None
 
         factory._emitter = _SyncEmitter()
-        resource_cls = factory.load_from_definition(
+        resource_cls = await factory.load_from_definition(
             resource_name=self.service_name,
             single_resource_json_definition=self.resource_model["service"],
             service_context=service_context,
