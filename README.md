@@ -5,6 +5,8 @@
 mock both asynchronous and synchronous service clients with consistent state between
 both, i.e. I want you to be able to synchronously write a file to a mock S3 bucket with
 boto3 and asynchronously read the same file back again using aioboto3 or aiobotocore.
+S3 object put/get (including empty bodies) and streaming reads now work across sync
+and async clients/resources while sharing the same Moto backend state.
 
 For the evolving project roadmap, see the wiki: <https://github.com/owenlamont/aiomoto/wiki/Roadmap>
 
