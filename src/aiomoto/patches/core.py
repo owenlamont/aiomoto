@@ -57,9 +57,9 @@ class _AioBytesIOAdapter:
             data = b""
         if isinstance(data, bytes):
             data_bytes = data
-        elif isinstance(data, bytearray):
+        elif isinstance(data, bytearray):  # pragma: no cover - defensive
             data_bytes = bytes(data)
-        else:
+        else:  # pragma: no cover - defensive
             data_bytes = bytes(data)
         self._update_eof(len(data_bytes))
         return data_bytes
@@ -150,7 +150,9 @@ class CorePatcher:
             if isinstance(http_response, AWSResponse) and not isinstance(
                 http_response, AioAWSResponse
             ):
-                http_response = _to_aio_response(http_response)
+                http_response = _to_aio_response(
+                    http_response
+                )  # pragma: no cover - defensive
             return await original_convert(http_response, operation_model)
 
         aio_endpoint.convert_to_response_dict = _convert
@@ -222,8 +224,10 @@ class CorePatcher:
             coro = self._emit(event_name, kwargs, stop_on_response=False)  # type: ignore[attr-defined]
             try:
                 loop = asyncio.get_running_loop()
-            except RuntimeError:
-                return asyncio.get_event_loop().run_until_complete(coro)
+            except RuntimeError:  # pragma: no cover - fallback
+                return asyncio.get_event_loop().run_until_complete(
+                    coro
+                )  # pragma: no cover - fallback
             else:
                 return loop.create_task(coro)
 

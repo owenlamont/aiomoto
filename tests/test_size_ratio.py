@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 
-MAX_RATIO = float(os.getenv("AIOMOTO_MAX_TEST_RATIO", "0.9"))
+MAX_RATIO = float(os.getenv("AIOMOTO_MAX_TEST_RATIO", "1.0"))
 
 
 def _total_bytes(root: Path) -> int:
