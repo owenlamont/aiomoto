@@ -15,7 +15,10 @@ aiobotocore or aioboto3 in the same process.
   aiobotocore parsers.
 - DynamoDB table create/describe and put/get flows through aiobotocore/aioboto3
   clients/resources while boto3 sees the same regional backends, including
-  missing-table errors.
+  missing-table errors and cross-visibility between sync and async calls.
+- Other AWS services may work out of the box through the same patch layer; if you hit
+  a service-specific gap, please open an issue with a minimal repro so we can add a
+  focused slice.
 
 For the evolving project roadmap, see the wiki: <https://github.com/owenlamont/aiomoto/wiki/Roadmap>
 
@@ -74,6 +77,37 @@ async def demo():
 While aiomoto is active it prevents aiobotocore from issuing real HTTP calls; any
 attempts fall back to Moto and will raise if they escape the stubber. Avoid mixing
 raw Moto decorators with aiomoto contexts in the same test to keep state aligned.
+
+### DynamoDB example
+
+```python
+import boto3
+from aiobotocore.session import AioSession
+from aiomoto import mock_aws
+
+AWS_REGION = "us-west-2"
+
+async def demo():
+    with mock_aws():
+        # Sync write
+        ddb_sync = boto3.client("dynamodb", region_name=AWS_REGION)
+        ddb_sync.create_table(
+            TableName="items",
+            KeySchema=[{"AttributeName": "pk", "KeyType": "HASH"}],
+            AttributeDefinitions=[{"AttributeName": "pk", "AttributeType": "S"}],
+            BillingMode="PAY_PER_REQUEST",
+        )
+        ddb_sync.put_item(TableName="items", Item={"pk": {"S": "from-sync"}})
+
+        # Async read (aiobotocore)
+        async with AioSession().create_client(
+            "dynamodb", region_name=AWS_REGION
+        ) as ddb_async:
+            item = await ddb_async.get_item(
+                TableName="items", Key={"pk": {"S": "from-sync"}}
+            )
+            assert item["Item"]["pk"]["S"] == "from-sync"
+```
 
 ## Roadmap
 
