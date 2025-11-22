@@ -65,16 +65,24 @@ jobs:
           uv run coverage report | tee coverage_summary.txt
       - name: Compute mean test/src ratio
         run: |
-          ratios=$(find coverage -name "ratio.txt" -maxdepth 2 -type f)
-          sum=0
-          count=0
-          for file in $ratios; do
-            val=$(awk '{print $3}' "$file")
-            sum=$(python - <<'PY'\nimport sys\ns=float(sys.argv[1]); a=float(sys.argv[2]); print(s+a)\nPY "$sum" "$val")
-            count=$((count+1))
-          done
-          mean=$(python - <<'PY'\nimport sys\ns=float(sys.argv[1]); c=int(sys.argv[2]);\nprint(0 if c==0 else s/c)\nPY "$sum" "$count")
-          printf "Mean tests/src ratio across matrix: %.3f\n" "$mean" | tee ratio_summary.txt
+          uv run python - <<'PY'
+          import pathlib
+
+          ratios: list[float] = []
+          for path in pathlib.Path("coverage").rglob("ratio.txt"):
+              try:
+                  with path.open() as f:
+                      parts = f.read().strip().split()
+                  if len(parts) >= 3:
+                      ratios.append(float(parts[2]))
+              except Exception:
+                  continue
+
+          mean = sum(ratios) / len(ratios) if ratios else 0.0
+          summary = f"Mean tests/src ratio across matrix: {mean:.3f}\n"
+          print(summary, end="")
+          pathlib.Path("ratio_summary.txt").write_text(summary)
+          PY
       - name: Prepare Comment Body
         run: |
           echo '### Coverage Report' >> comment_body.md
