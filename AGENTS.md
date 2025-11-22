@@ -16,6 +16,8 @@ boto3. The focus is a clean, reusable library API rather than a CLI entry point.
   and, when using sandboxed Codex tooling, request elevated permissions each time so
   the commands can access the full workspace and any required local services. In
   unrestricted environments just make sure the resources are reachable.
+- When running ad-hoc Python (inspecting objects, small scripts, etc.), use
+  `uv run python` so the project venv and pinned dependencies are active.
 - Update documentation whenever behaviour or feature changes are introduced.
 
 ## Project Structure
