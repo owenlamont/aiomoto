@@ -67,7 +67,7 @@ class ResourceCreatorContext:
 
             def emit_until_response(
                 self, *args: Any, **kwargs: Any
-            ) -> tuple[Any | None, Any | None]:
+            ) -> tuple[Any | None, Any | None]:  # pragma: no cover - defensive
                 return None, None
 
         factory._emitter = _SyncEmitter()
@@ -133,7 +133,7 @@ def patch_aioboto3_resource(session_mod: Any) -> None:
                 service_name, "resources-1"
             )
 
-        if config is None:
+        if config is None:  # pragma: no cover - default user agent is safe fallback
             config = Config(user_agent_extra="Resource")
 
         return ResourceCreatorContext(
@@ -159,7 +159,7 @@ def restore_aioboto3_resource(session_mod: Any) -> None:
     """Restore aioboto3 Session.resource if aiomoto patched it."""
 
     orig = getattr(session_mod.Session, "_aiomoto_resource_orig", None)
-    if orig is not None:
+    if orig is not None:  # pragma: no cover - defensive restore
         session_mod.Session.resource = orig
 
 

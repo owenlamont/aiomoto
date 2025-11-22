@@ -1,12 +1,18 @@
 # aiomoto
 
-`aiomoto` aims to be Moto for aiobotocore / aioboto3 (plus synchronous botocore / boto3
-). Specifically it is supposed to adapter for moto to aiobotocore. I aim to be able to
-mock both asynchronous and synchronous service clients with consistent state between
-both, i.e. I want you to be able to synchronously write a file to a mock S3 bucket with
-boto3 and asynchronously read the same file back again using aioboto3 or aiobotocore.
-S3 object put/get (including empty bodies) and streaming reads now work across sync
-and async clients/resources while sharing the same Moto backend state.
+`aiomoto` is Moto for aiobotocore / aioboto3 (while staying compatible with classic
+botocore / boto3). It adapts Moto's stubber so async and sync clients share the same
+in-memory backend: you can write to a mock S3 bucket with boto3 and read it back via
+aiobotocore or aioboto3 in the same process.
+
+## Supported today
+
+- `mock_aws()` usable as `with` or `async with`, guarding against real HTTP requests.
+- S3 bucket + object CRUD across sync/async clients and resources, including empty
+  bodies, overwrites, metadata, and streaming reads.
+- S3 listings (client + resource) keep key names intact, including odd byte sequences,
+  prefixes with `Delimiter` and `EncodingType=url`, while preserving headers needed by
+  aiobotocore parsers.
 
 For the evolving project roadmap, see the wiki: <https://github.com/owenlamont/aiomoto/wiki/Roadmap>
 
@@ -68,11 +74,7 @@ raw Moto decorators with aiomoto contexts in the same test to keep state aligned
 
 ## Roadmap
 
-This is early days and nothing in aiomoto is functional yet. I'd like to get services
-I personally use heavily like DynamoDb, S3 and some other more niche services working
-early. If that all goes well I'd welcome contributors to start adding support for other
-AWS services I don't personally use. I hope to be able to re-use much of motos automated
-tests for aiomoto too.
+Early focus is S3, then DynamoDB; see the wiki for the active task slices and status.
 
 ## Limitations
 
