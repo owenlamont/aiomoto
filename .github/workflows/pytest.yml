@@ -27,11 +27,15 @@ jobs:
         run: uv sync
       - name: Run tests with Coverage
         run: uv run pytest tests --cov=. --cov-branch --cov-report=term
+      - name: Record test/src size ratio
+        run: uv run python scripts/size_ratio.py --format json > ratio.json
       - name: Upload coverage artifact
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
         with:
           name: coverage-${{ matrix.os }}-python-${{ matrix.python-version }}
-          path: .coverage
+          path: |
+            .coverage
+            ratio.json
           include-hidden-files: true
   combine-and-comment:
     runs-on: ubuntu-latest
@@ -59,11 +63,37 @@ jobs:
           set -o pipefail
           uv run coverage combine coverage/*-python-*/.coverage
           uv run coverage report | tee coverage_summary.txt
+      - name: Compute mean test/src ratio
+        run: |
+          uv run python - <<'PY'
+          import pathlib
+          import json
+
+          ratios: list[float] = []
+          for path in pathlib.Path("coverage").rglob("ratio.json"):
+              try:
+                  data = json.loads(path.read_text())
+                  val = float(data.get("ratio", 0))
+                  ratios.append(val)
+              except Exception:
+                  continue
+
+          mean = sum(ratios) / len(ratios) if ratios else 0.0
+          detail = "\n".join(f"{p}: {r:.3f}" for p, r in zip(sorted(str(p) for p in pathlib.Path('coverage').rglob('ratio.json')), ratios))
+          summary = f"Mean tests/src ratio across matrix: {mean:.3f}\n"
+          print(summary, end="")
+          if detail:
+              print("Per-run ratios:")
+              print(detail)
+          pathlib.Path("ratio_summary.txt").write_text(summary)
+          PY
       - name: Prepare Comment Body
         run: |
           echo '### Coverage Report' >> comment_body.md
           echo '```txt' >> comment_body.md
           cat coverage_summary.txt >> comment_body.md
+          echo '' >> comment_body.md
+          cat ratio_summary.txt >> comment_body.md
           echo '' >> comment_body.md
           echo '```' >> comment_body.md
       - name: Find Coverage Report Comment

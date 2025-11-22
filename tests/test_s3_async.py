@@ -86,3 +86,95 @@ async def test_missing_bucket_raises_client_error() -> None:
         error = exc_info.value.response["Error"]
         assert error["Code"] == "NoSuchBucket"
         assert error["Message"] == "The specified bucket does not exist"
+
+
+@pytest.mark.asyncio
+async def test_async_client_empty_object_visible_to_boto3() -> None:
+    with mock_aws():
+        s3_sync = boto3.client("s3", region_name=AWS_REGION)
+        s3_sync.create_bucket(Bucket="async-bucket")
+
+        session = AioSession()
+        async with session.create_client("s3", region_name=AWS_REGION) as s3_async:
+            await s3_async.put_object(Bucket="async-bucket", Key="empty-key", Body=b"")
+            resp = await s3_async.get_object(Bucket="async-bucket", Key="empty-key")
+            assert resp["ContentLength"] == 0
+            assert await resp["Body"].read() == b""
+
+        sync_resp = s3_sync.get_object(Bucket="async-bucket", Key="empty-key")
+        assert sync_resp["ContentLength"] == 0
+        assert sync_resp["Body"].read() == b""
+
+
+@pytest.mark.asyncio
+async def test_async_overwrite_and_metadata_shared() -> None:
+    with mock_aws():
+        s3_sync = boto3.client("s3", region_name=AWS_REGION)
+        s3_sync.create_bucket(Bucket="meta-bucket")
+
+        session = AioSession()
+        async with session.create_client("s3", region_name=AWS_REGION) as s3_async:
+            await s3_async.put_object(
+                Bucket="meta-bucket",
+                Key="the-key",
+                Body=b"first",
+                Metadata={"md": "one"},
+            )
+            initial = await s3_async.get_object(Bucket="meta-bucket", Key="the-key")
+            assert initial["ContentLength"] == 5
+            assert await initial["Body"].read() == b"first"
+            assert initial["Metadata"] == {"md": "one"}
+
+            await s3_async.put_object(Bucket="meta-bucket", Key="the-key", Body=b"")
+            updated = await s3_async.get_object(Bucket="meta-bucket", Key="the-key")
+            assert updated["ContentLength"] == 0
+            assert await updated["Body"].read() == b""
+
+        sync_resp = s3_sync.get_object(Bucket="meta-bucket", Key="the-key")
+        assert sync_resp["ContentLength"] == 0
+        assert sync_resp["Body"].read() == b""
+
+
+@pytest.mark.asyncio
+async def test_sync_put_visible_to_async_clients_and_resources() -> None:
+    with mock_aws():
+        s3_sync = boto3.client("s3", region_name=AWS_REGION)
+        s3_sync.create_bucket(Bucket="sync-to-async")
+        s3_sync.put_object(
+            Bucket="sync-to-async", Key="hello.txt", Body=b"sync-wrote-this"
+        )
+
+        session = AioSession()
+        async with session.create_client("s3", region_name=AWS_REGION) as s3_async:
+            resp = await s3_async.get_object(Bucket="sync-to-async", Key="hello.txt")
+            assert await resp["Body"].read() == b"sync-wrote-this"
+
+        async with aioboto3.Session().resource(
+            "s3", region_name=AWS_REGION
+        ) as s3_res_async:
+            obj = s3_res_async.Object("sync-to-async", "hello.txt")
+            fetched = await obj.get()
+            assert await fetched["Body"].read() == b"sync-wrote-this"
+
+
+@pytest.mark.asyncio
+async def test_resource_streaming_body_iteration() -> None:
+    with mock_aws():
+        s3_sync = boto3.client("s3", region_name=AWS_REGION)
+        s3_sync.create_bucket(Bucket="stream-bucket")
+
+        async with aioboto3.Session().resource(
+            "s3", region_name=AWS_REGION
+        ) as s3_resource:
+            obj = s3_resource.Object("stream-bucket", "stream-key")
+            await obj.put(Body=b"chunk-onechunk-two")
+
+            resp = await obj.get()
+            body = resp["Body"]
+            assert resp["ContentLength"] == len("chunk-onechunk-two")
+
+            chunks = [part async for part in body.iter_chunks(chunk_size=5)]
+            assert b"".join(chunks) == b"chunk-onechunk-two"
+
+        sync_resp = s3_sync.get_object(Bucket="stream-bucket", Key="stream-key")
+        assert sync_resp["Body"].read() == b"chunk-onechunk-two"
