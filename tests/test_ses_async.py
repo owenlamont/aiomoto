@@ -4,12 +4,15 @@ import aioboto3
 from aiobotocore.session import AioSession
 import boto3
 from botocore.exceptions import ClientError
+from moto.core import models as moto_core_models
+from moto.ses.models import ses_backends
 import pytest
 
 from aiomoto import mock_aws
 
 
 AWS_REGION = "us-east-1"
+DEFAULT_ACCOUNT_ID = moto_core_models.DEFAULT_ACCOUNT_ID
 
 
 @pytest.mark.asyncio
@@ -42,19 +45,21 @@ async def test_verify_identity_visible_to_sync_and_aioboto3() -> None:
             identities = await ses.list_identities()
             assert "async@example.com" in identities["Identities"]
 
-        sync = boto3.client("ses", region_name=AWS_REGION)
-        assert "async@example.com" in sync.list_identities()["Identities"]
+            sync = boto3.client("ses", region_name=AWS_REGION)
+            assert "async@example.com" in sync.list_identities()["Identities"]
 
-        async with aioboto3.Session().client("ses", region_name=AWS_REGION) as ses3:
-            identities_aioboto3 = await ses3.list_identities()
+            async with aioboto3.Session().client("ses", region_name=AWS_REGION) as ses3:
+                identities_aioboto3 = await ses3.list_identities()
 
-        assert "async@example.com" in identities_aioboto3["Identities"]
+            assert "async@example.com" in identities_aioboto3["Identities"]
 
 
 @pytest.mark.asyncio
 async def test_unverified_source_rejected() -> None:
     with mock_aws():
         async with AioSession().create_client("ses", region_name=AWS_REGION) as ses:
+            # Ensure no identities pre-exist to avoid cross-test leakage.
+            ses_backends[DEFAULT_ACCOUNT_ID][AWS_REGION].email_identities.clear()
             with pytest.raises(ClientError) as exc:
                 await ses.send_email(
                     Source="unverified@example.com",
