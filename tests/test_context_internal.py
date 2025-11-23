@@ -13,6 +13,11 @@ def test_mock_context_start_stop_idempotent() -> None:
     ctx.stop()  # not started branch
 
 
+def test_stop_is_noop_when_not_started() -> None:
+    ctx = mock_aws()
+    ctx.stop()  # should simply return when depth is zero
+
+
 @pytest.mark.asyncio
 async def test_async_context_invokes_patchers() -> None:
     ctx = mock_aws()

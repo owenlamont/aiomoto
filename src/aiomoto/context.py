@@ -35,28 +35,34 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
         self._moto_context: MockAWS = moto_mock_aws()
         self._core = CorePatcher()
         self._aioboto3 = Aioboto3Patcher(aioboto3_session) if aioboto3_session else None
-        self._started = False
+        self._depth = 0
+
+    @property
+    def _started(self) -> bool:
+        """Backwards-compat alias for previous boolean flag."""
+
+        return self._depth > 0
 
     def start(self, reset: bool | None = None) -> None:
-        if self._started:
-            self._moto_context.start(reset=reset if reset is not None else self._reset)
-            return
-        self._core.start()
-        if self._aioboto3:
-            self._aioboto3.start()
+        if self._depth == 0:
+            self._core.start()
+            if self._aioboto3:
+                self._aioboto3.start()
+
         self._moto_context.start(reset=reset if reset is not None else self._reset)
-        self._started = True
+        self._depth += 1
 
     def stop(self, remove_data: bool | None = None) -> None:
-        if not self._started:
+        if self._depth == 0:
             return
         self._moto_context.stop(
             remove_data=remove_data if remove_data is not None else self._remove_data
         )
-        if self._aioboto3:
-            self._aioboto3.stop()
-        self._core.stop()
-        self._started = False
+        self._depth -= 1
+        if self._depth == 0:
+            if self._aioboto3:
+                self._aioboto3.stop()
+            self._core.stop()
 
     # Sync context protocol ----------------------------------------------------
     def __enter__(self) -> _MotoAsyncContext:

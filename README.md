@@ -16,6 +16,11 @@ aiobotocore or aioboto3 in the same process.
 - DynamoDB table create/describe and put/get flows through aiobotocore/aioboto3
   clients/resources while boto3 sees the same regional backends, including
   missing-table errors and cross-visibility between sync and async calls.
+- Secrets Manager create/list/get/delete via aiobotocore/aioboto3 while sharing Moto
+  state with boto3, covering staging labels and forced deletions.
+- SES verify identity/address and send_email/send_raw_email through async clients with
+  message IDs preserved and real HTTP guarded; boto3 and async clients share send quotas
+  and verified identities.
 - Other AWS services may work out of the box through the same patch layer; if you hit
   a service-specific gap, please open an issue with a minimal repro so we can add a
   focused slice.
