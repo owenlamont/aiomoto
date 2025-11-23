@@ -19,6 +19,9 @@ boto3. The focus is a clean, reusable library API rather than a CLI entry point.
 - When running ad-hoc Python (inspecting objects, small scripts, etc.), use
   `uv run python` so the project venv and pinned dependencies are active.
 - Update documentation whenever behaviour or feature changes are introduced.
+- Diagnose bugs before patching: avoid speculative “symptom” fixes. When behaviour is
+  unclear, instrument or reproduce minimally to identify the exact cause before
+  landing code changes; prefer root-cause fixes over defensive clean-ups.
 
 ## Project Structure
 
