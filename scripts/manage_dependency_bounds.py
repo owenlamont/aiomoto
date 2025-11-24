@@ -17,6 +17,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
+from packaging.requirements import Requirement
+from packaging.specifiers import Specifier
 from packaging.version import Version
 import tomlkit
 
@@ -32,6 +34,8 @@ class Bound:
         return self.token.split("[", 1)[0]
 
 
+# Bounds we actively manage (aioboto3-related dev deps and stub packages are
+# intentionally excluded).
 BOUNDS: tuple[Bound, ...] = (
     Bound("aiobotocore", "<=2.25.2"),
     Bound("moto", "<=5.1.17"),
@@ -62,27 +66,40 @@ def parse_args() -> argparse.Namespace:
 def is_match(value: str, bound: Bound) -> bool:
     """Return True if the dependency string targets the given bound token."""
 
-    token = bound.token
-    if token.endswith("["):
-        return value.startswith(token)
-    return value.startswith(token) or value.split("==")[0].split(">=")[0] == token
+    req = Requirement(value)
+    if bound.token.endswith("["):  # moto extras wildcard
+        return req.name == bound.base
+    return req.name == bound.base
 
 
-def parse_bounds(value: str) -> tuple[str | None, str | None]:
-    """Return lower and upper (inclusive) from a requirement fragment."""
+def extract_bounds(req: Requirement) -> tuple[str | None, str | None]:
+    """Return lower and upper (inclusive) from a parsed requirement."""
 
-    lower: str | None = None
-    upper: str | None = None
-    for part in value.split(","):
-        part = part.strip()
-        if part.startswith(">="):
-            lower = part.removeprefix(">=")
-        elif part.startswith("<="):
-            upper = part.removeprefix("<=")
-        elif part.startswith("<"):
-            # Disallow non-inclusive uppers
-            upper = part.removeprefix("<")
+    lower = None
+    upper = None
+    for spec in req.specifier:
+        if spec.operator == ">=":
+            lower = spec.version
+        elif spec.operator == "<=":
+            upper = spec.version
+        elif spec.operator == "<":
+            upper = spec.version  # treat non-inclusive as upper candidate
     return lower, upper
+
+
+def render_req(req: Requirement, specs: list[Specifier]) -> str:
+    """Render a Requirement with a new specifier list, keeping extras/markers.
+
+    Returns:
+        Canonicalized requirement string with updated specifiers.
+    """
+
+    base = req.name
+    if req.extras:
+        base = f"{base}[{','.join(sorted(req.extras))}]"
+    spec_text = ",".join(str(s) for s in specs) if specs else ""
+    marker_text = f"; {req.marker}" if req.marker else ""
+    return f"{base}{spec_text}{marker_text}"
 
 
 def loosen_item(value: str, bound: Bound) -> tuple[str, dict[str, str]]:
@@ -95,28 +112,24 @@ def loosen_item(value: str, bound: Bound) -> tuple[str, dict[str, str]]:
     if not is_match(value, bound):
         return value, {}
 
-    lower, upper = parse_bounds(value)
-    # capture existing bounds
+    req = Requirement(value)
+    lower, upper = extract_bounds(req)
+
     snapshot: dict[str, str] = {}
     if lower:
         snapshot["lower"] = lower
     if upper:
         snapshot["upper"] = upper
 
-    # Convert == to >=
-    if "==" in value:
-        _left, version = value.split("==", 1)
-        lower = version
-        upper = None
-    # Promote upper -> lower if present
+    # If there was an upper bound, promote it to the new lower bound.
     if upper:
         lower = upper
 
-    # Rebuild constraint string without upper
-    base = value.split("==")[0].split(">=")[0].split(",")[0].strip()
-    value = f"{base}>={lower}" if lower else base
+    specs: list[Specifier] = []
+    if lower:
+        specs.append(Specifier(f">={lower}"))
 
-    return value, snapshot
+    return render_req(req, specs), snapshot
 
 
 def add_bound_item(
@@ -134,7 +147,8 @@ def add_bound_item(
     if not is_match(value, bound):
         return value
 
-    base = bound.base
+    req = Requirement(value)
+    base = req.name
     snap = snapshot.get(base) or {}
     lower = snap.get("lower")
     previous_upper = snap.get("upper")
@@ -144,13 +158,13 @@ def add_bound_item(
     if installed and ((not new_upper) or (Version(installed) > Version(new_upper))):
         new_upper = installed
 
-    parts = [value.split("==")[0].split(">=")[0].split(",")[0].strip()]
+    specs: list[Specifier] = []
     if lower:
-        parts.append(f">={lower}")
+        specs.append(Specifier(f">={lower}"))
     if new_upper:
-        parts.append(f"<={new_upper}")
+        specs.append(Specifier(f"<={new_upper}"))
 
-    return ",".join(parts)
+    return render_req(req, specs)
 
 
 def apply(
@@ -262,7 +276,11 @@ def resolve_versions() -> dict[str, str]:
 
 
 def main() -> None:
-    """CLI entrypoint."""
+    """CLI entrypoint.
+
+    Raises:
+        SystemExit: if add-bounds is invoked without a prior loosen snapshot.
+    """
 
     args = parse_args()
     path = Path(args.project_path)
@@ -273,6 +291,10 @@ def main() -> None:
         save_snapshot(snapshot)
     else:  # add-bounds
         snapshot = load_snapshot()
+        if not snapshot:
+            raise SystemExit(
+                "bounds snapshot missing; run loosen-bounds before add-bounds"
+            )
         resolved = resolve_versions()
         apply(doc, add_bound_item, snapshot=snapshot, resolved=resolved)
         if SNAPSHOT_PATH.exists():

@@ -167,10 +167,11 @@ xray = ["moto[xray]>=5.1.5,<=5.1.17"]
 
 [dependency-groups]
 dev = [
-    "aioboto3==15.5.0",
-    "types-aioboto3[full]==15.5.0",
+    "aioboto3>=15.5.0",
+    "types-aioboto3[full]>=15.5.0",
     "tomlkit>=0.13.2",
-    "boto3-stubs[full]==1.40.61",
+    "boto3-stubs[full]>=1.40.61",
+    "packaging>=25.0",
     "coverage>=7.6.9",
     "freezegun>=1.5.1",
     "mypy>=1.17.0",
@@ -178,7 +179,7 @@ dev = [
     "pytest-asyncio>=0.25.2",
     "pytest-cov>=6.0.0",
     "pytest-mock>=3.14.0",
-    "types-aiobotocore[full]==2.25.2",
+    "types-aiobotocore[full]>=2.24.1",
 ]
 
 [build-system]

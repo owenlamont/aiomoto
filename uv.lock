@@ -564,6 +564,7 @@ dev = [
     { name = "coverage" },
     { name = "freezegun" },
     { name = "mypy" },
+    { name = "packaging" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -701,18 +702,19 @@ provides-extras = ["acm", "acmpca", "all", "amp", "apigateway", "apigatewayv2", 
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "aioboto3", specifier = "==15.5.0" },
-    { name = "boto3-stubs", extras = ["full"], specifier = "==1.40.61" },
+    { name = "aioboto3", specifier = ">=15.5.0" },
+    { name = "boto3-stubs", extras = ["full"], specifier = ">=1.40.61" },
     { name = "coverage", specifier = ">=7.6.9" },
     { name = "freezegun", specifier = ">=1.5.1" },
     { name = "mypy", specifier = ">=1.17.0" },
+    { name = "packaging", specifier = ">=25.0" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-asyncio", specifier = ">=0.25.2" },
     { name = "pytest-cov", specifier = ">=6.0.0" },
     { name = "pytest-mock", specifier = ">=3.14.0" },
     { name = "tomlkit", specifier = ">=0.13.2" },
-    { name = "types-aioboto3", extras = ["full"], specifier = "==15.5.0" },
-    { name = "types-aiobotocore", extras = ["full"], specifier = "==2.25.2" },
+    { name = "types-aioboto3", extras = ["full"], specifier = ">=15.5.0" },
+    { name = "types-aiobotocore", extras = ["full"], specifier = ">=2.24.1" },
 ]
 
 [[package]]
