@@ -205,9 +205,6 @@ acm = [
 acmpca = [
     { name = "moto" },
 ]
-aioboto3 = [
-    { name = "aioboto3" },
-]
 all = [
     { name = "moto", extra = ["all"] },
 ]
@@ -578,7 +575,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aioboto3", marker = "extra == 'aioboto3'", specifier = "==15.5.0" },
     { name = "aiobotocore", specifier = "==2.25.1" },
     { name = "moto", specifier = "==5.1.17" },
     { name = "moto", extras = ["acm"], marker = "extra == 'acm'", specifier = "==5.1.17" },
@@ -701,7 +697,7 @@ requires-dist = [
     { name = "moto", extras = ["wafv2"], marker = "extra == 'wafv2'", specifier = "==5.1.17" },
     { name = "moto", extras = ["xray"], marker = "extra == 'xray'", specifier = "==5.1.17" },
 ]
-provides-extras = ["acm", "acmpca", "all", "aioboto3", "amp", "apigateway", "apigatewayv2", "applicationautoscaling", "appsync", "athena", "autoscaling", "awslambda", "awslambda-simple", "backup", "batch", "batch-simple", "budgets", "ce", "cloudformation", "cloudfront", "cloudtrail", "cloudwatch", "codebuild", "codecommit", "codepipeline", "cognitoidentity", "cognitoidp", "comprehend", "config", "databrew", "datapipeline", "datasync", "dax", "dms", "ds", "dynamodb", "dynamodbstreams", "ebs", "ec2", "ec2instanceconnect", "ecr", "ecs", "efs", "eks", "elasticache", "elasticbeanstalk", "elastictranscoder", "elb", "elbv2", "emr", "emrcontainers", "emrserverless", "es", "events", "firehose", "forecast", "glacier", "glue", "greengrass", "guardduty", "iam", "inspector2", "iot", "iotdata", "ivs", "kinesis", "kinesisvideo", "kinesisvideoarchivedmedia", "kms", "logs", "managedblockchain", "mediaconnect", "medialive", "mediapackage", "mediastore", "mediastoredata", "meteringmarketplace", "mq", "opsworks", "organizations", "panorama", "personalize", "pinpoint", "polly", "proxy", "quicksight", "ram", "rds", "redshift", "redshiftdata", "rekognition", "resourcegroups", "resourcegroupstaggingapi", "route53", "route53resolver", "s3", "s3control", "s3crc32c", "sagemaker", "scheduler", "sdb", "secretsmanager", "server", "servicediscovery", "servicequotas", "ses", "signer", "sns", "sqs", "ssm", "ssoadmin", "stepfunctions", "sts", "support", "swf", "textract", "timestreamwrite", "transcribe", "wafv2", "xray"]
+provides-extras = ["acm", "acmpca", "all", "amp", "apigateway", "apigatewayv2", "applicationautoscaling", "appsync", "athena", "autoscaling", "awslambda", "awslambda-simple", "backup", "batch", "batch-simple", "budgets", "ce", "cloudformation", "cloudfront", "cloudtrail", "cloudwatch", "codebuild", "codecommit", "codepipeline", "cognitoidentity", "cognitoidp", "comprehend", "config", "databrew", "datapipeline", "datasync", "dax", "dms", "ds", "dynamodb", "dynamodbstreams", "ebs", "ec2", "ec2instanceconnect", "ecr", "ecs", "efs", "eks", "elasticache", "elasticbeanstalk", "elastictranscoder", "elb", "elbv2", "emr", "emrcontainers", "emrserverless", "es", "events", "firehose", "forecast", "glacier", "glue", "greengrass", "guardduty", "iam", "inspector2", "iot", "iotdata", "ivs", "kinesis", "kinesisvideo", "kinesisvideoarchivedmedia", "kms", "logs", "managedblockchain", "mediaconnect", "medialive", "mediapackage", "mediastore", "mediastoredata", "meteringmarketplace", "mq", "opsworks", "organizations", "panorama", "personalize", "pinpoint", "polly", "proxy", "quicksight", "ram", "rds", "redshift", "redshiftdata", "rekognition", "resourcegroups", "resourcegroupstaggingapi", "route53", "route53resolver", "s3", "s3control", "s3crc32c", "sagemaker", "scheduler", "sdb", "secretsmanager", "server", "servicediscovery", "servicequotas", "ses", "signer", "sns", "sqs", "ssm", "ssoadmin", "stepfunctions", "sts", "support", "swf", "textract", "timestreamwrite", "transcribe", "wafv2", "xray"]
 
 [package.metadata.requires-dev]
 dev = [

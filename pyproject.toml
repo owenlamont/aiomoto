@@ -48,7 +48,6 @@ Issues = "https://github.com/owenlamont/aiomoto/issues"
 acm = ["moto[acm]==5.1.17"]
 acmpca = ["moto[acmpca]==5.1.17"]
 all = ["moto[all]==5.1.17"]
-aioboto3 = ["aioboto3==15.5.0"]
 amp = ["moto[amp]==5.1.17"]
 apigateway = ["moto[apigateway]==5.1.17"]
 apigatewayv2 = ["moto[apigatewayv2]==5.1.17"]

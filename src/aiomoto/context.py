@@ -8,16 +8,9 @@ from functools import wraps
 import inspect
 from typing import Any, no_type_check, overload, ParamSpec, TypeVar
 
-
-try:
-    import aioboto3.session as aioboto3_session
-except ImportError:  # pragma: no cover
-    aioboto3_session = None  # type: ignore[assignment]
-
 from moto.core.decorator import mock_aws as moto_mock_aws
 from moto.core.models import MockAWS
 
-from aiomoto.patches.aioboto3 import Aioboto3Patcher
 from aiomoto.patches.core import CorePatcher
 
 
@@ -34,7 +27,6 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
         self._remove_data = remove_data
         self._moto_context: MockAWS = moto_mock_aws()
         self._core = CorePatcher()
-        self._aioboto3 = Aioboto3Patcher(aioboto3_session) if aioboto3_session else None
         self._depth = 0
 
     @property
@@ -46,8 +38,6 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
     def start(self, reset: bool | None = None) -> None:
         if self._depth == 0:
             self._core.start()
-            if self._aioboto3:
-                self._aioboto3.start()
 
         self._moto_context.start(reset=reset if reset is not None else self._reset)
         self._depth += 1
@@ -60,8 +50,6 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
         )
         self._depth -= 1
         if self._depth == 0:
-            if self._aioboto3:
-                self._aioboto3.stop()
             self._core.stop()
 
     # Sync context protocol ----------------------------------------------------
