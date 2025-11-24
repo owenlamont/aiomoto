@@ -26,7 +26,6 @@ import tomlkit
 @dataclass(frozen=True)
 class Bound:
     token: str  # e.g., "aiobotocore" or "moto[s3]"
-    upper: str  # e.g., "<3.0.0"
 
     @property
     def base(self) -> str:
@@ -34,14 +33,15 @@ class Bound:
         return self.token.split("[", 1)[0]
 
 
-# Bounds we actively manage (aioboto3-related dev deps and stub packages are
-# intentionally excluded).
+# Packages we actively manage (aioboto3-related dev deps and stub packages are
+# intentionally excluded). Upper bounds come from the snapshot taken at loosen.
 BOUNDS: tuple[Bound, ...] = (
-    Bound("aiobotocore", "<=2.25.2"),
-    Bound("moto", "<=5.1.17"),
-    Bound("moto[", "<=5.1.17"),  # handles moto extras (prefix match)
+    Bound("aiobotocore"),
+    Bound("moto"),
+    Bound("moto["),  # handles moto extras (prefix match)
 )
 SNAPSHOT_PATH = Path("artifacts/bounds_snapshot.json")
+MIN_LOWER = {"aiobotocore": "2.24.1", "moto": "5.1.5"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -116,8 +116,9 @@ def loosen_item(value: str, bound: Bound) -> tuple[str, dict[str, str]]:
     lower, upper = extract_bounds(req)
 
     snapshot: dict[str, str] = {}
-    if lower:
-        snapshot["lower"] = lower
+    floor = MIN_LOWER.get(bound.base)
+    if lower or floor:
+        snapshot["lower"] = floor or lower
     if upper:
         snapshot["upper"] = upper
 
@@ -150,7 +151,7 @@ def add_bound_item(
     req = Requirement(value)
     base = req.name
     snap = snapshot.get(base) or {}
-    lower = snap.get("lower")
+    lower = snap.get("lower") or MIN_LOWER.get(base)
     previous_upper = snap.get("upper")
 
     installed = resolved.get(base)

@@ -18,7 +18,7 @@ keywords = [
     "mocks",
 ]
 dependencies = [
-    "aiobotocore>=2.24.1,<=2.25.2",
+    "aiobotocore>=2.24.1,<=2.25.1",
     "moto>=5.1.5,<=5.1.17",
 ]
 classifiers = [
@@ -167,8 +167,8 @@ xray = ["moto[xray]>=5.1.5,<=5.1.17"]
 
 [dependency-groups]
 dev = [
-    "aioboto3>=15.5.0",
-    "types-aioboto3[full]>=15.5.0",
+    "aioboto3>=15.3.0",
+    "types-aioboto3[full]>=15.3.0",
     "tomlkit>=0.13.2",
     "boto3-stubs[full]>=1.40.61",
     "packaging>=25.0",
