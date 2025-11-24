@@ -24,14 +24,14 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-      - name: Loosen aioboto pins (workflow only)
-        run: uv run scripts/manage_aioboto_pins.py loosen
+      - name: Loosen bounds (workflow only)
+        run: uv run scripts/manage_dependency_bounds.py loosen-bounds
 
-      - name: Upgrade dependencies with relaxed pins
+      - name: Upgrade dependencies with relaxed bounds
         run: uv sync --upgrade --all-extras
 
-      - name: Repin aioboto deps from lock
-        run: uv run scripts/manage_aioboto_pins.py repin
+      - name: Restore upper bounds
+        run: uv run scripts/manage_dependency_bounds.py add-bounds
 
       - name: Re-lock with pinned versions
         run: uv lock
@@ -59,8 +59,7 @@ jobs:
           commit-message: "chore: upgrade dependencies and repin aioboto"
           title: "chore: upgrade dependencies and repin aioboto"
           body: |
-            This PR loosens aiobotocore/aioboto3 pins, upgrades via `uv sync --upgrade --all-extras`, repins to the resolved versions, and refreshes `uv.lock`.
-            It keeps mainline pins strict while allowing safe exploration on the workflow branch.
+            This PR temporarily loosens upper bounds to explore newer releases, upgrades via `uv sync --upgrade --all-extras`, restores bounds, and refreshes `uv.lock`.
           branch: bot/uv-lock-refresh
           author: GitHub Actions <actions@github.com>
           delete-branch: true

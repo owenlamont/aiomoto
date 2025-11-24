@@ -19,29 +19,13 @@ def test_stop_is_noop_when_not_started() -> None:
 
 
 @pytest.mark.asyncio
-async def test_async_context_invokes_patchers() -> None:
+async def test_async_context_tracks_depth() -> None:
     ctx = mock_aws()
-    tracker = {"start": 0, "stop": 0}
 
-    class DummyPatcher:
-        def start(self) -> None:
-            tracker["start"] += 1
-
-        def stop(self) -> None:
-            tracker["stop"] += 1
-
-    ctx._aioboto3 = DummyPatcher()  # type: ignore[assignment]
-
-    async with ctx:
-        assert tracker["start"] == 1
-        assert ctx._started is True
-
-    assert tracker["stop"] == 1
     assert ctx._started is False
-
-
-def test_context_handles_absent_aioboto3() -> None:
-    ctx = mock_aws()
-    ctx._aioboto3 = None
-    ctx.start()
-    ctx.stop()
+    async with ctx:
+        assert ctx._started is True
+        async with ctx:
+            assert ctx._started is True
+        assert ctx._started is True
+    assert ctx._started is False
