@@ -4,7 +4,6 @@ import json
 import aioboto3
 from botocore.exceptions import ClientError
 from freezegun import freeze_time
-from moto import settings
 from moto.sts.responses import MAX_FEDERATION_TOKEN_POLICY_LENGTH, MAX_ROLE_NAME_LENGTH
 import pytest
 
@@ -31,10 +30,9 @@ async def test_get_session_token_async() -> None:
             creds = (await sts.get_session_token(DurationSeconds=903))["Credentials"]
 
     assert isinstance(creds["Expiration"], datetime)
-    if not settings.TEST_SERVER_MODE:
-        assert creds["Expiration"].strftime("%Y-%m-%dT%H:%M:%S.000Z") == (
-            "2012-01-01T12:15:03.000Z"
-        )
+    assert creds["Expiration"].strftime("%Y-%m-%dT%H:%M:%S.000Z") == (
+        "2012-01-01T12:15:03.000Z"
+    )
     assert creds["SessionToken"] == (
         "AQoEXAMPLEH4aoAH0gNCAPyJxz4BlCFFxWNE1OPTgk5TthT+FvwqnKwRcOIfrR"
         "h3c/LTo6UDdyJwOOvEVPvLXCrrrUtdnniCEXAMPLE/IvU1dYUg2RVAJBanLiHb"
@@ -57,10 +55,9 @@ async def test_get_federation_token_async() -> None:
     fed_user = fed_token["FederatedUser"]
 
     assert isinstance(creds["Expiration"], datetime)
-    if not settings.TEST_SERVER_MODE:
-        assert creds["Expiration"].strftime("%Y-%m-%dT%H:%M:%S.000Z") == (
-            "2012-01-01T12:15:03.000Z"
-        )
+    assert creds["Expiration"].strftime("%Y-%m-%dT%H:%M:%S.000Z") == (
+        "2012-01-01T12:15:03.000Z"
+    )
     assert creds["SessionToken"] == (
         "AQoDYXdzEPT//////////wEXAMPLEtc764bNrC9SAPBSM22wDOk4x4HIZ8j4FZ"
         "TwdQWLWsKWHGBuFqwAeMicRXmxfpSPfIeoIYRqTflfKD8YUuwthAx7mSEI/qkP"
@@ -119,8 +116,7 @@ async def test_assume_role_async(region: str, partition: str) -> None:
             )
 
     credentials = assume_role_response["Credentials"]
-    if not settings.TEST_SERVER_MODE:
-        assert credentials["Expiration"].isoformat() == "2012-01-01T12:15:00+00:00"
+    assert credentials["Expiration"].isoformat() == "2012-01-01T12:15:00+00:00"
     assert len(credentials["SessionToken"]) == 356
     assert credentials["SessionToken"].startswith("FQoGZXIvYXdzE")
     assert len(credentials["AccessKeyId"]) == 20
