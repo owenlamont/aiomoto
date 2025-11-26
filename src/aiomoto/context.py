@@ -22,10 +22,12 @@ RA = TypeVar("RA")
 class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
     """Moto context usable from both sync and async code."""
 
-    def __init__(self, reset: bool = True, remove_data: bool = True) -> None:
+    def __init__(
+        self, reset: bool = True, remove_data: bool = True, **moto_kwargs: Any
+    ) -> None:
         self._reset = reset
         self._remove_data = remove_data
-        self._moto_context: MockAWS = moto_mock_aws()
+        self._moto_context: MockAWS = moto_mock_aws(**moto_kwargs)
         self._core = CorePatcher()
         self._depth = 0
 
@@ -110,7 +112,7 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
 
 
 def mock_aws_decorator(
-    *, reset: bool = True, remove_data: bool = True
+    *, reset: bool = True, remove_data: bool = True, **moto_kwargs: Any
 ) -> _MotoAsyncContext:
     """Return a decorator that wraps callables in ``mock_aws``.
 
@@ -118,4 +120,4 @@ def mock_aws_decorator(
     reusing the shared async-aware context manager.
     """
 
-    return _MotoAsyncContext(reset=reset, remove_data=remove_data)
+    return _MotoAsyncContext(reset=reset, remove_data=remove_data, **moto_kwargs)
