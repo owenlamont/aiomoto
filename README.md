@@ -144,7 +144,7 @@ async def demo():
 
 ## Roadmap
 
-The living roadmap sits in the wiki: <https://github.com/owenlamont/aiomoto/wiki/Roadmap>
+The living roadmap sits in the wiki [Roadmap](https://github.com/owenlamont/aiomoto/wiki/Roadmap)
 
 ## Limitations
 
