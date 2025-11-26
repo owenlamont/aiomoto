@@ -71,7 +71,7 @@ repos:
           # --write-changes (Don't use this to stop typos making auto-corrections)
         ]
   - repo: https://github.com/owenlamont/uv-secure
-    rev: 0.15.0
+    rev: 0.15.1
     hooks:
       - id: uv-secure
   - repo: https://github.com/adrienverge/yamllint.git
@@ -79,7 +79,8 @@ repos:
     hooks:
       - id: yamllint
   - repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: v1.16.3
+    rev: v1.17.0
     hooks:
     - id: zizmor
-      args: [ --min-severity, low, --min-confidence, medium, --fix=safe]
+      args: [--min-severity, low, --min-confidence, medium, --fix=safe, .]
+      pass_filenames: false

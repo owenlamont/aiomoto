@@ -22,7 +22,9 @@ class _AioBytesIOAdapter:
     The adapter exposes the minimal surface that aiobotocore's StreamingBody
     expects from an aiohttp.ClientResponse: a ``content.read`` coroutine,
     ``at_eof`` helper, and ``url`` attribute. ``content`` points back to the
-    adapter to mirror aiohttp's layout.
+    adapter to mirror aiohttp's layout. Some callers (for example s3fs) also
+    expect a ``close`` method on the body; the adapter provides a no-op close
+    that forwards to the underlying raw object when available.
     """
 
     def __init__(self, raw: Any, url: str) -> None:
@@ -31,6 +33,7 @@ class _AioBytesIOAdapter:
         self.content = self  # StreamingBody calls ``raw.content.read``.
         self._length = self._infer_length()
         self._eof = False
+        self.closed = False
 
     def _infer_length(self) -> int | None:
         if hasattr(self._raw, "getbuffer"):
@@ -63,6 +66,23 @@ class _AioBytesIOAdapter:
             data_bytes = bytes(data)
         self._update_eof(len(data_bytes))
         return data_bytes
+
+    def close(self) -> None:
+        close_fn = getattr(self._raw, "close", None)
+        if close_fn:
+            with contextlib.suppress(Exception):  # pragma: no cover - defensive
+                close_fn()
+        self._eof = True
+        self.closed = True
+
+    async def __aenter__(self) -> _AioBytesIOAdapter:
+        return self
+
+    async def __aexit__(
+        self, _exc_type: Any, _exc: BaseException | None, _tb: Any
+    ) -> bool:
+        self.close()
+        return False
 
 
 async def _materialize_request_body(request: Any) -> None:

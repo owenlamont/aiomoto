@@ -144,15 +144,13 @@ async def demo():
 
 ## Roadmap
 
-Early focus is S3, then DynamoDB; see the wiki for the active task slices and status.
+The living roadmap sits in the wiki [Roadmap](https://github.com/owenlamont/aiomoto/wiki/Roadmap)
 
 ## Limitations
 
-I don't plan to support mixing both moto and aiomoto contexts in the same tests,
-that'd be really complicated to get to sync... however I want aiomoto to be like a super
-set of moto for the services it does implement. So a aiomoto mock context will patch
-both boto3 / botocore and aiobotocore / aioboto3. Not sure how complicated this patching
-is going to be yet but we'll see.
-
-Since aiomoto will be tightly coupled to both aiobotocore and moto for now I intend it
-to pin both of those dependencies exactly.
+- Mixing raw Moto decorators with `aiomoto.mock_aws()` in the same test is unsupported;
+  the contexts manage shared state differently and can diverge.
+- aiomoto wraps moto and patches aiobotocore; aioboto3 and s3fs should be covered
+  automatically as they use aiobotocore clients/resources.
+- We keep version ranges narrow and tested together, if you notice a new version of
+  aiobotocore or moto that doesn't get covered feel free to raise an issue for this.

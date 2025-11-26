@@ -1,6 +1,6 @@
 [project]
 name = "aiomoto"
-version = "0.0.5"
+version = "0.0.6"
 description = "Moto-style AWS service mocks for aiobotocore/aioboto3"
 readme = "README.md"
 authors = [
@@ -180,6 +180,7 @@ dev = [
     "pytest-cov>=6.0.0",
     "pytest-mock>=3.14.0",
     "types-aiobotocore[full]>=2.24.1",
+    "s3fs>=2024.6.0",
 ]
 
 [build-system]

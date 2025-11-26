@@ -21,6 +21,7 @@ from aiomoto.patches.core import (
 class _DummyBodyWithLen:
     def __init__(self, payload: bytes) -> None:
         self._payload = payload
+        self.closed = False
 
     def __len__(self) -> int:
         return len(self._payload)
@@ -29,6 +30,9 @@ class _DummyBodyWithLen:
         if amt is None:
             return self._payload
         return self._payload[:amt]
+
+    def close(self) -> None:
+        self.closed = True
 
 
 class _DummyBodyNone:
@@ -44,6 +48,13 @@ async def test_aio_bytes_io_adapter_branches() -> None:
     assert await adapter.read() == b"abc"
     assert await adapter.read(2) == b"ab"
     assert adapter.at_eof() is False
+    adapter.close()
+    assert adapter.closed is True
+    assert adapter.at_eof() is True
+
+    async with _AioBytesIOAdapter(_DummyBodyWithLen(b"x"), "url") as cm_adapter:
+        assert await cm_adapter.read() == b"x"
+    assert cm_adapter.closed is True
 
     adapter2 = _AioBytesIOAdapter(_DummyBodyNone(), "url")
     assert await adapter2.read() == b""
