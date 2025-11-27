@@ -158,9 +158,13 @@ async def test_create_pipeline_async() -> None:
     async with _client() as client:
         role_arn = await _get_role_arn()
         response = await _create_basic_codepipeline(client, "test-pipeline", role_arn)
+        tagged = await _create_basic_codepipeline(
+            client, "test-pipeline-tags", role_arn, tags=[{"key": "a", "value": "b"}]
+        )
 
     assert response["pipeline"] == _expected_pipeline(role_arn)
     assert response["tags"] == [{"key": "key", "value": "value"}]
+    assert tagged["tags"] == [{"key": "a", "value": "b"}]
 
 
 @pytest.mark.asyncio
@@ -169,6 +173,8 @@ async def test_create_pipeline_errors_async() -> None:
         async with _client() as client:
             role_arn = await _get_role_arn()
             await _create_basic_codepipeline(client, "test-pipeline", role_arn)
+            # second call hits existing role path in _get_role_arn for coverage
+            await _get_role_arn()
 
             with pytest.raises(ClientError) as e1:
                 await _create_basic_codepipeline(client, "test-pipeline", role_arn)
