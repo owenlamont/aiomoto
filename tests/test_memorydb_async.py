@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, TYPE_CHECKING
 
 import aioboto3
@@ -8,13 +10,14 @@ from aiomoto import mock_aws
 
 
 REGION = "ap-southeast-1"
+SESSION = aioboto3.Session()
 
 if TYPE_CHECKING:
     from aioboto3.client import ClientCreatorContext
 
 
-def _client(region: str = REGION) -> "ClientCreatorContext[Any]":
-    return aioboto3.Session().client("memorydb", region_name=region)
+def _client(region: str = REGION) -> ClientCreatorContext[Any]:
+    return SESSION.client("memorydb", region_name=region)
 
 
 async def _create_subnet_group(region: str) -> dict[str, Any]:
