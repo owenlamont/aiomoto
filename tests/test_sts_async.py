@@ -153,7 +153,7 @@ async def test_assume_role_with_too_long_role_session_name_async() -> None:
 
         async with _session().client("sts", region_name="us-east-1") as sts:
             session_name = "s" * 65
-            with pytest.raises(ClientError) as ex:
+            with pytest.raises(ClientError) as ex:  # pragma: no branch
                 await sts.assume_role(
                     RoleArn=role_arn, RoleSessionName=session_name, DurationSeconds=900
                 )
@@ -266,7 +266,7 @@ async def test_federation_token_with_too_long_policy_async() -> None:
             json_policy = json.dumps({"Version": "2012-10-17", "Statement": statements})
             assert len(json_policy) > MAX_FEDERATION_TOKEN_POLICY_LENGTH
 
-            with pytest.raises(ClientError) as ex:
+            with pytest.raises(ClientError) as ex:  # pragma: no branch
                 await sts.get_federation_token(
                     Name="foo", DurationSeconds=3600, Policy=json_policy
                 )

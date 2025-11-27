@@ -250,7 +250,7 @@ async def test_create_pipeline_errors_async() -> None:
                     }
                 )
 
-            with pytest.raises(ClientError) as e4:
+            with pytest.raises(ClientError) as e4:  # pragma: no branch
                 await client.create_pipeline(
                     pipeline={
                         "name": "invalid-pipeline",
@@ -468,7 +468,7 @@ async def test_create_pipeline_with_extended_trust_policy_async() -> None:
 async def test_list_tags_for_resource_errors_async() -> None:
     with mock_aws():
         async with _client() as client:
-            with pytest.raises(ClientError) as e:
+            with pytest.raises(ClientError) as e:  # pragma: no branch
                 await client.list_tags_for_resource(
                     resourceArn="arn:aws:codepipeline:us-east-1:123456789012:not-existing"
                 )

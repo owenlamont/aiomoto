@@ -31,7 +31,7 @@ async def test_list_aws_default_service_quotas_async() -> None:
 async def test_list_defaults_for_unknown_service_async() -> None:
     with mock_aws():
         async with _client("us-east-1") as client:
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.list_aws_default_service_quotas(ServiceCode="unknown")
 
     err = exc.value.response["Error"]
@@ -60,7 +60,7 @@ async def test_get_service_quota_async() -> None:
 async def test_get_unknown_service_quota_async() -> None:
     with mock_aws():
         async with _client("us-east-2") as client:
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.get_service_quota(ServiceCode="vpc", QuotaCode="unknown")
 
     err = exc.value.response["Error"]

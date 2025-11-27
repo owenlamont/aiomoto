@@ -35,7 +35,7 @@ async def test_create_protection_resource_already_exists_async() -> None:
                 Name="foobar",
                 ResourceArn="arn:aws:cloudfront::123456789012:distribution/foobar",
             )
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.create_protection(
                     Name="foobar",
                     ResourceArn="arn:aws:cloudfront::123456789012:distribution/foobar",
@@ -123,7 +123,7 @@ async def test_describe_protection_with_protection_id_async() -> None:
 async def test_describe_protection_with_both_resource_and_protection_id_async() -> None:
     with mock_aws():
         async with _client("us-east-1") as client:
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.describe_protection(
                     ResourceArn="arn:aws:cloudfront::123456789012:distribution/foobar",
                     ProtectionId="aaaaaaaa-bbbb-cccc-dddd-aaa221177777",
@@ -136,7 +136,7 @@ async def test_describe_protection_with_both_resource_and_protection_id_async() 
 async def test_describe_protection_resource_doesnot_exist_async() -> None:
     with mock_aws():
         async with _client("us-east-1") as client:
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.describe_protection(
                     ResourceArn="arn:aws:cloudfront::123456789012:distribution/donotexist"
                 )
@@ -148,7 +148,7 @@ async def test_describe_protection_resource_doesnot_exist_async() -> None:
 async def test_describe_protection_doesnot_exist_async() -> None:
     with mock_aws():
         async with _client("us-east-1") as client:
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.describe_protection(
                     ProtectionId="aaaaaaaa-bbbb-cccc-dddd-aaa221177777"
                 )

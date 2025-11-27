@@ -103,7 +103,7 @@ async def test_codebuild_create_project_with_invalid_inputs_async() -> None:
                     serviceRole="arn:aws:iam::123456789012:role/service-role/my-role",
                 )
 
-            with pytest.raises(invalid_exc):
+            with pytest.raises(invalid_exc):  # pragma: no branch
                 await client.create_project(
                     name="!some_project_",
                     source=_source_s3(),
@@ -112,7 +112,7 @@ async def test_codebuild_create_project_with_invalid_inputs_async() -> None:
                     serviceRole="arn:aws:iam::123456789012:role/service-role/my-role",
                 )
 
-            with pytest.raises(invalid_exc):
+            with pytest.raises(invalid_exc):  # pragma: no branch
                 await client.create_project(
                     name="valid_name",
                     source=_source_s3(),
@@ -137,7 +137,7 @@ async def test_codebuild_create_project_when_exists_async() -> None:
                 ),
             )
 
-            with pytest.raises(ClientError) as err:
+            with pytest.raises(ClientError) as err:  # pragma: no branch
                 await client.create_project(
                     name="some_project",
                     source=_source_s3(),

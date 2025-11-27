@@ -52,7 +52,7 @@ async def test_list_channels_filter_async() -> None:
 async def test_get_channel_not_exists_async() -> None:
     with mock_aws():
         async with _client() as client:
-            with pytest.raises(ClientError):
+            with pytest.raises(ClientError):  # pragma: no branch
                 await client.get_channel(
                     arn="arn:aws:ivs:eu-west-1:123:channel/missing"
                 )

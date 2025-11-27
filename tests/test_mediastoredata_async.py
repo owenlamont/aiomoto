@@ -21,5 +21,5 @@ def _client() -> ClientCreatorContext[Any]:
 async def test_put_and_get_object_async() -> None:
     with mock_aws():
         async with _client() as client:
-            with pytest.raises(ClientError):
+            with pytest.raises(ClientError):  # pragma: no branch
                 await client.put_object(Path="/hello.txt", Body=b"hello")

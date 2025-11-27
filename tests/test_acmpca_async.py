@@ -79,7 +79,7 @@ async def test_get_certificate_authority_certificate_invalid_state_async() -> No
                 )
             )["CertificateAuthorityArn"]
 
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.get_certificate_authority_certificate(
                     CertificateAuthorityArn=arn
                 )

@@ -73,7 +73,7 @@ async def test_create_security_policy_async() -> None:
 async def test_create_security_policy_invalid_type_async() -> None:
     with mock_aws():
         async with _client() as client:
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.create_security_policy(
                     name="policy-foobar", policy=ENCRYPTION_POLICY, type="fake type"
                 )
@@ -87,7 +87,7 @@ async def test_create_security_policy_same_name_and_type_async() -> None:
             await client.create_security_policy(
                 name="policy-foobar", policy=ENCRYPTION_POLICY, type="encryption"
             )
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.create_security_policy(
                     name="policy-foobar", policy=ENCRYPTION_POLICY, type="encryption"
                 )
@@ -121,7 +121,7 @@ async def test_get_security_policy_invalid_name_async() -> None:
             await client.create_security_policy(
                 name="policy-foo", policy=ENCRYPTION_POLICY, type="encryption"
             )
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.get_security_policy(name="policy-bar", type="encryption")
 
     assert exc.value.response["Error"]["Code"] == "ResourceNotFoundException"

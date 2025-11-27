@@ -54,7 +54,7 @@ async def test_location_crud_async() -> None:
             remaining = await client.list_locations()
             assert len(remaining["Locations"]) == 1
 
-            with pytest.raises(ClientError):
+            with pytest.raises(ClientError):  # pragma: no branch
                 await client.delete_location(LocationArn=smb_arn)
 
 
@@ -87,7 +87,7 @@ async def test_task_create_requires_locations_async() -> None:
         async with _client() as client:
             _, s3_arn = await _create_locations(client)
 
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.create_task(
                     SourceLocationArn="missing", DestinationLocationArn=s3_arn
                 )

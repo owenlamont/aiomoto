@@ -44,7 +44,7 @@ async def test_create_group_and_duplicate_name_async() -> None:
             assert resp["IdentityStoreId"] == store_id
             assert UUID(resp["GroupId"])
 
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.create_group(
                     IdentityStoreId=store_id,
                     DisplayName="test_group",
@@ -63,7 +63,7 @@ async def test_create_user_duplicate_username_async() -> None:
             store_id = _store_id()
             await _create_user(client, store_id, username="dup")
 
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await _create_user(client, store_id, username="dup")
 
     err = exc.value

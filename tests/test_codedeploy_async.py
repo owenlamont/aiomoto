@@ -71,7 +71,7 @@ async def test_create_application_existing_async() -> None:
             )
             assert "applicationId" in first
 
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.create_application(
                     applicationName="sample_app", computePlatform="Server"
                 )
@@ -122,7 +122,7 @@ async def test_create_deployment_nonexistent_group_async() -> None:
                 applicationName=application_name, computePlatform="Lambda"
             )
 
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.create_deployment(
                     applicationName=application_name,
                     deploymentGroupName="non-existent-group-name",
@@ -169,7 +169,7 @@ async def test_create_deployment_group_existing_async() -> None:
                 serviceRoleArn=_service_role(),
             )
 
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.create_deployment_group(
                     applicationName=application_name,
                     deploymentGroupName=deployment_group_name,

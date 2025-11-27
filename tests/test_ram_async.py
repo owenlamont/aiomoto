@@ -236,7 +236,7 @@ async def test_get_resource_shares_async() -> None:
 async def test_get_resource_shares_errors_async() -> None:
     with mock_aws():
         async with _ram_client() as client:
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.get_resource_shares(resourceOwner="invalid")
 
     err = exc.value
@@ -285,7 +285,7 @@ async def test_update_resource_share_async() -> None:
 async def test_update_resource_share_errors_async() -> None:
     with mock_aws():
         async with _ram_client() as client:
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.update_resource_share(
                     resourceShareArn=(
                         f"arn:aws:ram:us-east-1:{ACCOUNT_ID}:resource-share/not-existing"
@@ -327,7 +327,7 @@ async def test_delete_resource_share_async() -> None:
 async def test_delete_resource_share_errors_async() -> None:
     with mock_aws():
         async with _ram_client() as client:
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.delete_resource_share(
                     resourceShareArn=(
                         f"arn:aws:ram:us-east-1:{ACCOUNT_ID}:resource-share/not-existing"
@@ -359,7 +359,7 @@ async def test_enable_sharing_with_aws_organization_async() -> None:
 async def test_enable_sharing_with_aws_organization_errors_async() -> None:
     with mock_aws():
         async with _ram_client() as client:
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.enable_sharing_with_aws_organization()
 
     err = exc.value

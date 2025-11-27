@@ -53,7 +53,7 @@ async def test_create_cluster_minimal_async() -> None:
 async def test_create_cluster_invalid_name_async() -> None:
     with mock_aws():
         async with _client() as client:
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.create_cluster(
                     ClusterName="1invalid",
                     NodeType="dax.t3.small",
@@ -69,7 +69,7 @@ async def test_create_cluster_invalid_name_async() -> None:
 async def test_delete_unknown_cluster_async() -> None:
     with mock_aws():
         async with _client() as client:
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.delete_cluster(ClusterName="missing")
 
     err = exc.value.response["Error"]

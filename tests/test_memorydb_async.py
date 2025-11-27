@@ -52,7 +52,7 @@ async def test_create_duplicate_cluster_fails_async() -> None:
             await client.create_cluster(
                 ClusterName="foo-bar", NodeType="db.t4g.small", ACLName="open-access"
             )
-            with pytest.raises(ClientError) as ex:
+            with pytest.raises(ClientError) as ex:  # pragma: no branch
                 await client.create_cluster(
                     ClusterName="foo-bar",
                     NodeType="db.t4g.small",
@@ -92,7 +92,7 @@ async def test_create_cluster_with_subnet_group_async() -> None:
 async def test_create_duplicate_subnet_group_fails_async() -> None:
     with mock_aws():
         await _create_subnet_group(REGION)
-        with pytest.raises(ClientError) as ex:
+        with pytest.raises(ClientError) as ex:  # pragma: no branch
             await _create_subnet_group(REGION)
     err = ex.value.response["Error"]
     assert err["Code"] == "SubnetGroupAlreadyExistsFault"
@@ -102,7 +102,7 @@ async def test_create_duplicate_subnet_group_fails_async() -> None:
 async def test_create_invalid_subnet_group_fails_async() -> None:
     with mock_aws():
         async with _client() as client:
-            with pytest.raises(ClientError) as ex:
+            with pytest.raises(ClientError) as ex:  # pragma: no branch
                 await client.create_subnet_group(
                     SubnetGroupName="foo-bar", SubnetIds=["foo", "bar"]
                 )
@@ -140,7 +140,7 @@ async def test_create_snapshot_async() -> None:
 async def test_create_snapshot_with_non_existing_cluster_fails_async() -> None:
     with mock_aws():
         async with _client() as client:
-            with pytest.raises(ClientError) as ex:
+            with pytest.raises(ClientError) as ex:  # pragma: no branch
                 await client.create_snapshot(
                     ClusterName="foobar", SnapshotName="my-snapshot-1"
                 )
@@ -160,7 +160,7 @@ async def test_create_duplicate_snapshot_fails_async() -> None:
             await client.create_snapshot(
                 ClusterName=cluster["Cluster"]["Name"], SnapshotName="my-snapshot-1"
             )
-            with pytest.raises(ClientError) as ex:
+            with pytest.raises(ClientError) as ex:  # pragma: no branch
                 await client.create_snapshot(
                     ClusterName=cluster["Cluster"]["Name"], SnapshotName="my-snapshot-1"
                 )

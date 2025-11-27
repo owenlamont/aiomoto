@@ -46,7 +46,7 @@ async def test_create_backup_plan_already_exists_async() -> None:
             await client.create_backup_plan(
                 BackupPlan={"BackupPlanName": "plan", "Rules": rules}
             )
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.create_backup_plan(
                     BackupPlan={"BackupPlanName": "plan", "Rules": rules}
                 )
@@ -89,7 +89,7 @@ async def test_get_and_delete_backup_plan_async() -> None:
 async def test_get_backup_plan_invalid_ids_async() -> None:
     with mock_aws():
         async with _client() as client:
-            with pytest.raises(ClientError) as exc:
+            with pytest.raises(ClientError) as exc:  # pragma: no branch
                 await client.get_backup_plan(BackupPlanId="missing")
 
     assert exc.value.response["Error"]["Code"] == "ResourceNotFoundException"

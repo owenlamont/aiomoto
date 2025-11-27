@@ -98,7 +98,7 @@ async def test_create_repository_repository_name_exists_async() -> None:
         async with _client() as client:
             await client.create_repository(repositoryName="repository_two")
 
-            with pytest.raises(ClientError) as err:
+            with pytest.raises(ClientError) as err:  # pragma: no branch
                 await client.create_repository(
                     repositoryName="repository_two",
                     repositoryDescription="description repo two",
@@ -118,7 +118,7 @@ async def test_create_repository_repository_name_exists_async() -> None:
 async def test_create_repository_invalid_repository_name_async() -> None:
     with mock_aws():
         async with _client() as client:
-            with pytest.raises(ClientError) as err:
+            with pytest.raises(ClientError) as err:  # pragma: no branch
                 await client.create_repository(
                     repositoryName="in_123_valid_@#$_characters"
                 )
@@ -166,7 +166,7 @@ async def test_get_repository_async() -> None:
 
     with mock_aws():
         async with _client(region="us-east-1") as client:
-            with pytest.raises(ClientError) as err:
+            with pytest.raises(ClientError) as err:  # pragma: no branch
                 await client.get_repository(repositoryName=repository_name)
 
     ex = err.value
@@ -180,7 +180,7 @@ async def test_get_repository_async() -> None:
 async def test_get_repository_invalid_repository_name_async() -> None:
     with mock_aws():
         async with _client() as client:
-            with pytest.raises(ClientError) as err:
+            with pytest.raises(ClientError) as err:  # pragma: no branch
                 await client.get_repository(repositoryName="repository_one-@#@")
 
     ex = err.value
@@ -215,7 +215,7 @@ async def test_delete_repository_async() -> None:
 async def test_delete_repository_invalid_repository_name_async() -> None:
     with mock_aws():
         async with _client(region="us-east-1") as client:
-            with pytest.raises(ClientError) as err:
+            with pytest.raises(ClientError) as err:  # pragma: no branch
                 await client.delete_repository(repositoryName="_rep@ository_one")
 
     ex = err.value
