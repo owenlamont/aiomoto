@@ -18,6 +18,7 @@ from functools import wraps
 import inspect
 from typing import Any, no_type_check, overload, ParamSpec, TypeVar
 
+from moto import settings
 from moto.core.decorator import mock_aws as moto_mock_aws
 from moto.core.models import MockAWS
 
@@ -35,6 +36,11 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
     def __init__(
         self, reset: bool = True, remove_data: bool = True, *, config: Any | None = None
     ) -> None:
+        if settings.TEST_SERVER_MODE or settings.is_test_proxy_mode():
+            raise RuntimeError(
+                "aiomoto supports in-process moto only; server/proxy modes are "
+                "unsupported."
+            )
         self._reset = reset
         self._remove_data = remove_data
         moto_kwargs: dict[str, Any] = {}

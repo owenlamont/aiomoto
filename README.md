@@ -111,6 +111,10 @@ While aiomoto is active it prevents aiobotocore from issuing real HTTP calls; an
 attempts fall back to Moto and will raise if they escape the stubber. Avoid mixing
 raw Moto decorators with aiomoto contexts in the same test to keep state aligned.
 
+> aiomoto supports Moto’s **in-process** mode only. Moto server/proxy modes
+> (`TEST_SERVER_MODE`, proxy mode) will raise at `mock_aws()` time so you don’t
+> accidentally depend on real network calls.
+
 ### s3fs (async) example
 
 When using s3fs, prefer its async interface and supply an
