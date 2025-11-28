@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 import aioboto3
@@ -28,7 +30,7 @@ def _session() -> aioboto3.Session:
     return aioboto3.Session()
 
 
-def _client(region: str = REGION) -> "ClientCreatorContext[AioCodeCommitClient]":
+def _client(region: str = REGION) -> ClientCreatorContext[AioCodeCommitClient]:
     return _session().client("codecommit", region_name=region)
 
 

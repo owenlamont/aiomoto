@@ -208,6 +208,3 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-
-# Local planning doc
-docs/moto-porting.md

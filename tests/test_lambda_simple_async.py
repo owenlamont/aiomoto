@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from io import BytesIO
 import json
 from typing import Any

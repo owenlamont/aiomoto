@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, TYPE_CHECKING
 
 import aioboto3
@@ -11,7 +13,7 @@ if TYPE_CHECKING:
     from aioboto3.client import ClientCreatorContext
 
 
-def _client(region: str) -> "ClientCreatorContext[Any]":
+def _client(region: str) -> ClientCreatorContext[Any]:
     return aioboto3.Session().client("shield", region_name=region)
 
 

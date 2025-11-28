@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, TYPE_CHECKING
 
 import aioboto3
@@ -45,7 +47,7 @@ NETWORK_POLICY = """
 """
 
 
-def _client() -> "ClientCreatorContext[Any]":
+def _client() -> ClientCreatorContext[Any]:
     return aioboto3.Session().client(
         "opensearchserverless", region_name="ap-southeast-1"
     )

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, TYPE_CHECKING
 
 import aioboto3
@@ -13,7 +15,7 @@ if TYPE_CHECKING:
 FAKE_TAGS = {"TestKey": "TestValue", "TestKey2": "TestValue2"}
 
 
-def _client(region: str) -> "ClientCreatorContext[Any]":
+def _client(region: str) -> ClientCreatorContext[Any]:
     return aioboto3.Session().client("kafka", region_name=region)
 
 

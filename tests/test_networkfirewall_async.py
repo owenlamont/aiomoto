@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, TYPE_CHECKING
 
 import aioboto3
@@ -13,7 +15,7 @@ if TYPE_CHECKING:
 REGION = "us-east-1"
 
 
-def _client(region: str = REGION) -> "ClientCreatorContext[Any]":
+def _client(region: str = REGION) -> ClientCreatorContext[Any]:
     return aioboto3.Session().client("network-firewall", region_name=region)
 
 

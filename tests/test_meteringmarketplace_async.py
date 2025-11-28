@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from copy import deepcopy
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -77,7 +79,7 @@ USAGE_RECORDS = [
 ]
 
 
-def _client() -> "ClientCreatorContext[MarketplaceMeteringClient]":
+def _client() -> ClientCreatorContext[MarketplaceMeteringClient]:
     return aioboto3.Session().client("meteringmarketplace", region_name="us-east-1")
 
 

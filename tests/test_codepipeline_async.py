@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Mapping
 from copy import deepcopy
 from datetime import datetime
@@ -31,11 +33,11 @@ def _session() -> aioboto3.Session:
     return aioboto3.Session()
 
 
-def _client(region: str = REGION) -> "ClientCreatorContext[CodePipelineClient]":
+def _client(region: str = REGION) -> ClientCreatorContext[CodePipelineClient]:
     return _session().client("codepipeline", region_name=region)
 
 
-def _iam_client() -> "ClientCreatorContext[IAMClient]":
+def _iam_client() -> ClientCreatorContext[IAMClient]:
     return _session().client("iam", region_name=REGION)
 
 
@@ -86,7 +88,7 @@ async def _get_role_arn(
             return str(created["Role"]["Arn"])
 
 
-def _expected_pipeline(role_arn: str) -> "PipelineDeclarationTypeDef":
+def _expected_pipeline(role_arn: str) -> PipelineDeclarationTypeDef:
     return {
         "name": "test-pipeline",
         "roleArn": role_arn,
@@ -140,11 +142,11 @@ def _expected_pipeline(role_arn: str) -> "PipelineDeclarationTypeDef":
 
 
 async def _create_basic_codepipeline(
-    client: "CodePipelineClient",
+    client: CodePipelineClient,
     name: str,
     role_arn: str,
-    tags: list["TagTypeDef"] | None = None,
-) -> "CreatePipelineOutputTypeDef":
+    tags: list[TagTypeDef] | None = None,
+) -> CreatePipelineOutputTypeDef:
     if tags is None:
         tags = [{"key": "key", "value": "value"}]
     pipeline: PipelineDeclarationTypeDef = deepcopy(_expected_pipeline(role_arn))
