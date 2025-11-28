@@ -1,6 +1,3 @@
-[run]
-core = sysmon
-
 [paths]
 source =
     src
