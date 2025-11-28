@@ -204,8 +204,22 @@ Goal: broaden service coverage in `aiomoto` by porting lightweight moto tests (s
 | test_ssm | 16 | 1 | data-heavy | pending | YAML template |
 | test_stepfunctions | 21 | 19 | data-heavy | pending | parser templates |
 
-### Tracking log (update as we port)
+### Current strategy (branch state, pre-0.0.7 release)
 
-- _Pending_: no moto tests ported yet in this effort.
-- Use this section to record per‑module status:
-  - Module: `test_<service>` → status (`ported`, `partial`, `skipped`), async client used (`aioboto3`/`aiobotocore`), notes (skips, bugs found).
+- Goal is **shim-contract coverage**, not service-by-service parity. We keep a small
+  set that exercises aiomoto’s patching, async pathways, and prevents real IO.
+- **Kept test modules:** `test_mock_aws_context.py`, `test_mock_decorator.py`,
+  `test_context_internal.py`, `patches/test_core_internal.py`, `test_s3fs_integration.py`,
+  `test_lambda_simple_async.py`, `test_s3_async.py`, `test_dynamodb_async.py`,
+  `test_sqs_async.py`, `test_sns_async.py`, `test_sts_async.py`, `test_kms_async.py`,
+  `test_events_async.py`, `test_kafka_async.py`, `test_smoke.py`.
+- **Removed:** the long tail of straight CRUD moto ports (most other `test_*_async.py`
+  modules). Rationale: they mostly re-test moto, added ~8k LoC, and didn’t increase
+  aiomoto source coverage. Re-introduce only if a service needs aiomoto-specific
+  behavior or a regression guard.
+
+### Tracking log
+
+- Future additions should be explicitly justified (e.g., aiomoto behavior difference,
+  async-only semantics, regression seen in moto drift). Update the table above with
+  status `ported`/`skipped` plus a short reason when adding or dropping.
