@@ -11,7 +11,8 @@ boto3. The focus is a clean, reusable library API rather than a CLI entry point.
 ## Code Change Requirements
 
 - Whenever code is changed, ensure all pre-commit linters pass (`prek run --all-files`)
-  and all pytests pass (`uv run pytest`). Newly added code must keep full branch
+  and all pytests pass (`uv run pytest -n logical`). Newly added code must keep full
+  branch
   coverage. Always invoke these commands with a multi-minute timeout (>= 4 minutes)
   and, when using sandboxed Codex tooling, request elevated permissions each time so
   the commands can access the full workspace and any required local services. In
@@ -80,11 +81,13 @@ boto3. The focus is a clean, reusable library API rather than a CLI entry point.
 
 ## Automated Tests
 
-- Always run `uv run pytest` when fixing bugs or making incremental code changes.
-- For new features or larger changes run `uv run pytest --cov=. --cov-branch
-  --cov-report term-missing` and inspect any uncovered lines. Some conditional logic
-  is platform- or version-specific, so 100% branch coverage may require CI, but treat
-  any gaps as suspect until proven otherwise.
+- Always run `uv run pytest -n logical` when fixing bugs or making incremental code
+  changes.
+- For new features or larger changes run
+  `uv run pytest -n logical --cov=. --cov-branch --cov-report term-missing` and
+  inspect any uncovered lines. Some conditional logic is platform- or
+  version-specific, so 100% branch coverage may require CI, but treat any gaps as
+  suspect until proven otherwise.
 - Future integration tests may rely on AWS emulators such as DynamoDB Local on
   `http://localhost:8000`. Request elevated permissions when needed so those
   endpoints remain reachable.

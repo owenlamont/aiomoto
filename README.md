@@ -111,6 +111,42 @@ While aiomoto is active it prevents aiobotocore from issuing real HTTP calls; an
 attempts fall back to Moto and will raise if they escape the stubber. Avoid mixing
 raw Moto decorators with aiomoto contexts in the same test to keep state aligned.
 
+> aiomoto supports Moto’s **in-process** mode only. Moto server/proxy modes
+> (`TEST_SERVER_MODE`, proxy mode) will raise at `mock_aws()` time so you don’t
+> accidentally depend on real network calls.
+
+### s3fs (async) example
+
+When using s3fs, prefer its async interface and supply an
+`aiobotocore.session.AioSession` plus a running loop; close the client explicitly to
+avoid event-loop shutdown races inside fsspec’s sync wrappers.
+
+```python
+import asyncio
+import aiobotocore.session
+import pytest
+import s3fs
+
+from aiomoto import mock_aws
+
+
+@pytest.mark.asyncio
+async def test_s3fs_async_usage() -> None:
+    session = aiobotocore.session.AioSession()
+    fs = s3fs.S3FileSystem(
+        asynchronous=True,
+        session=session,
+        loop=asyncio.get_running_loop(),
+    )
+    with mock_aws():
+        await fs._call_s3("create_bucket", Bucket="bucket-123")
+        await fs._call_s3(
+            "put_object", Bucket="bucket-123", Key="test.txt", Body=b"hi"
+        )
+        assert await fs._cat_file("bucket-123/test.txt") == b"hi"
+    await fs._s3.close()
+```
+
 ### DynamoDB example
 
 ```python

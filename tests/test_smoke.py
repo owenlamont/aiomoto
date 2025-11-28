@@ -1,5 +1,7 @@
 """Basic smoke import tests for the distribution."""
 
+from __future__ import annotations
+
 import aiomoto
 
 
