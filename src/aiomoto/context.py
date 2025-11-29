@@ -130,16 +130,49 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
         return sync_wrapper
 
 
+@overload
 def mock_aws_decorator(
-    *, reset: bool = True, remove_data: bool = True, config: Any | None = None
-) -> _MotoAsyncContext:
-    """Return a decorator that wraps callables in ``mock_aws``.
+    func: Callable[P, Coroutine[Any, Any, RA]], /
+) -> Callable[P, Coroutine[Any, Any, RA]]: ...
 
-    This is a convenience factory that mirrors Moto's ``@mock_aws`` decorator while
-    reusing the shared async-aware context manager.
+
+@overload
+def mock_aws_decorator(func: Callable[P, R], /) -> Callable[P, R]: ...
+
+
+@overload
+def mock_aws_decorator(
+    func: None = ...,
+    *,
+    reset: bool = True,
+    remove_data: bool = True,
+    config: Any | None = None,
+) -> _MotoAsyncContext: ...
+
+
+def mock_aws_decorator(
+    func: Callable[P, object] | None = None,
+    *,
+    reset: bool = True,
+    remove_data: bool = True,
+    config: Any | None = None,
+) -> Any:
+    """Decorator factory mirroring Moto's ``mock_aws`` wrapper.
+
+    Parentheses are optional: ``@mock_aws_decorator`` uses defaults, while
+    ``@mock_aws_decorator(config={...})`` lets callers preconfigure behaviour.
+
+    Returns:
+        Either a wrapped callable (when used as ``@mock_aws_decorator``) or a
+        reusable context/decorator instance when invoked with keyword arguments.
     """
 
-    return _MotoAsyncContext(reset=reset, remove_data=remove_data, config=config)
+    context = _MotoAsyncContext(reset=reset, remove_data=remove_data, config=config)
+
+    if func is None:
+        return context
+
+    return context(func)
 
 
 @overload

@@ -26,7 +26,7 @@ def test_sync_decorator_allows_boto3_calls() -> None:
 async def test_async_decorator_allows_aiobotocore_calls() -> None:
     bucket = f"decorator-async-{uuid.uuid4().hex}"
 
-    @mock_aws_decorator()
+    @mock_aws_decorator
     async def create_and_list(name: str) -> list[str]:
         session = AioSession()
         async with session.create_client("s3", region_name="us-east-1") as client:

@@ -8,21 +8,12 @@ aiobotocore or aioboto3 in the same process.
 ## Supported today
 
 - `mock_aws()` usable as `with` or `async with`, guarding against real HTTP requests.
-- S3 bucket + object CRUD across sync/async clients and resources, including empty
-  bodies, overwrites, metadata, and streaming reads.
-- S3 listings (client + resource) keep key names intact, including odd byte sequences,
-  prefixes with `Delimiter` and `EncodingType=url`, while preserving headers needed by
-  aiobotocore parsers.
-- DynamoDB table create/describe and put/get flows through aiobotocore/aioboto3
-  clients/resources while boto3 sees the same regional backends, including
-  missing-table errors and cross-visibility between sync and async calls.
-- Secrets Manager create/list/get/delete via aiobotocore/aioboto3 while sharing Moto
-  state with boto3, covering staging labels and forced deletions.
-- SES verify identity/address and send_email/send_raw_email through async clients with
-  message IDs preserved and real HTTP guarded; boto3 and async clients share send quotas
-  and verified identities.
-- Other AWS services may work out of the box through the same patch layer; if you hit
-  a service-specific gap, please open an issue with a minimal repro so we can add a
+- Actively exercised in tests: S3 (CRUD + listings + streaming reads), DynamoDB
+  (create/describe/put/get), Secrets Manager, SES, SNS, SQS, KMS, STS, Lambda, Events,
+  Kafka/MSK, and s3fs async integration — all sharing one Moto backend between sync
+  boto3/botocore and async aiobotocore/aioboto3 clients.
+- Other Moto services often work out of the box through the same patch layer; if you
+  hit a service-specific gap, open an issue with a minimal repro so we can add a
   focused slice.
 
 For the evolving project roadmap, see the wiki: <https://github.com/owenlamont/aiomoto/wiki/Roadmap>
@@ -66,8 +57,9 @@ sync/async callables).
 ### Use as a decorator
 
 Use `@mock_aws` as a decorator when you want Moto started/stopped for the span of
-a test function. Both sync and async callables are supported (parentheses are
-optional to match Moto’s examples). `mock_aws_decorator`
+a test function. Both sync and async callables are supported; omit parentheses
+when you are not passing arguments (they remain optional to match Moto’s examples).
+`mock_aws_decorator`
 is also exported for teams that prefer an explicitly decorator-only name (or want
 to preconfigure `reset` / `remove_data` once and reuse it) while leaving `mock_aws`
 for context-manager usage.
@@ -84,7 +76,7 @@ def test_sync_bucket() -> None:
     client.create_bucket(Bucket="decorator-demo")
 
 
-@mock_aws_decorator()
+@mock_aws_decorator
 async def test_async_bucket() -> None:
     async with AioSession().create_client("s3", region_name="us-east-1") as client:
         await client.create_bucket(Bucket="decorator-demo")
@@ -118,9 +110,12 @@ raw Moto decorators with aiomoto contexts in the same test to keep state aligned
 
 ### s3fs (async) example
 
-When using s3fs, prefer its async interface and supply an
-`aiobotocore.session.AioSession` plus a running loop; close the client explicitly to
-avoid event-loop shutdown races inside fsspec’s sync wrappers.
+s3fs caches each `S3FileSystem` (unless `cacheable=False`) and installs a weakref
+finalizer that calls `close_session` on the loop captured at construction time.
+If that loop is already closed when the finalizer runs—e.g., pytest ends the
+session loop while a cached instance still lives—you can see ``Event loop is
+closed`` or “attached to a different loop” errors during teardown. Upstream switched to
+`get_running_loop` in 2025.3.1 to reduce this, but explicit close is still safest.
 
 ```python
 import asyncio
@@ -134,18 +129,18 @@ from aiomoto import mock_aws
 @pytest.mark.asyncio
 async def test_s3fs_async_usage() -> None:
     session = aiobotocore.session.AioSession()
-    fs = s3fs.S3FileSystem(
-        asynchronous=True,
-        session=session,
-        loop=asyncio.get_running_loop(),
-    )
-    with mock_aws():
-        await fs._call_s3("create_bucket", Bucket="bucket-123")
-        await fs._call_s3(
-            "put_object", Bucket="bucket-123", Key="test.txt", Body=b"hi"
-        )
-        assert await fs._cat_file("bucket-123/test.txt") == b"hi"
-    await fs._s3.close()
+    fs = s3fs.S3FileSystem(asynchronous=True, session=session)
+
+    try:
+        with mock_aws():
+            await fs._call_s3("create_bucket", Bucket="bucket-123")
+            await fs._call_s3(
+                "put_object", Bucket="bucket-123", Key="test.txt", Body=b"hi"
+            )
+            assert await fs._cat_file("bucket-123/test.txt") == b"hi"
+    finally:
+        if fs._s3 is not None:
+            await fs._s3.close()
 ```
 
 ### DynamoDB example
@@ -185,7 +180,7 @@ The living roadmap sits in the wiki [Roadmap](https://github.com/owenlamont/aiom
 
 ## Limitations
 
-- Mixing raw Moto decorators with `aiomoto.mock_aws()` in the same test is unsupported;
+- Mixing raw Moto decorators with `aiomoto.mock_aws` in the same test is unsupported;
   the contexts manage shared state differently and can diverge.
 - aiomoto wraps moto and patches aiobotocore; aioboto3 and s3fs should be covered
   automatically as they use aiobotocore clients/resources.

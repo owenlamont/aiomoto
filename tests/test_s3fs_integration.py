@@ -31,5 +31,5 @@ async def test_s3fs_reads_and_closes_body() -> None:
 
         assert await fs._cat_file(path) == b"hello\n"
 
-        if fs._s3 is not None:
-            await fs._s3.close()
+        assert fs._s3 is not None
+        await fs._s3.close()
