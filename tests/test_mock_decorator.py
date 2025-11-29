@@ -12,7 +12,7 @@ from aiomoto import mock_aws, mock_aws_decorator
 def test_sync_decorator_allows_boto3_calls() -> None:
     bucket = f"decorator-sync-{uuid.uuid4().hex}"
 
-    @mock_aws()
+    @mock_aws
     def create_and_list(name: str) -> list[str]:
         client = boto3.client("s3", region_name="us-east-1")
         client.create_bucket(Bucket=name)

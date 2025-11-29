@@ -10,9 +10,9 @@ boto3. The focus is a clean, reusable library API rather than a CLI entry point.
 
 ## Code Change Requirements
 
-- Whenever code is changed, ensure all pre-commit linters pass (`prek run --all-files`)
-  and all pytests pass (`uv run pytest -n logical`). Newly added code must keep full
-  branch
+- Whenever code is changed, ensure all pre-commit linters pass
+  (`prek run --all-files`) and all pytests pass
+  (`uv run pytest -n logical --color=no`). Newly added code must keep full branch
   coverage. Always invoke these commands with a multi-minute timeout (>= 4 minutes)
   and, when using sandboxed Codex tooling, request elevated permissions each time so
   the commands can access the full workspace and any required local services. In
@@ -81,10 +81,11 @@ boto3. The focus is a clean, reusable library API rather than a CLI entry point.
 
 ## Automated Tests
 
-- Always run `uv run pytest -n logical` when fixing bugs or making incremental code
-  changes.
+- Always run `uv run pytest -n logical --color=no` when fixing bugs or making
+  incremental code changes.
 - For new features or larger changes run
-  `uv run pytest -n logical --cov=. --cov-branch --cov-report term-missing` and
+  `uv run pytest -n logical --color=no --cov=. --cov-branch --cov-report term-missing`
+  and
   inspect any uncovered lines. Some conditional logic is platform- or
   version-specific, so 100% branch coverage may require CI, but treat any gaps as
   suspect until proven otherwise.
