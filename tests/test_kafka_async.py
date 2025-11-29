@@ -19,7 +19,7 @@ def _client(region: str) -> ClientCreatorContext[Any]:
     return aioboto3.Session().client("kafka", region_name=region)
 
 
-@mock_aws()
+@mock_aws
 @pytest.mark.asyncio
 async def test_create_cluster_v2_async() -> None:
     async with _client("ap-southeast-1") as client:
