@@ -59,12 +59,19 @@ boto3. The focus is a clean, reusable library API rather than a CLI entry point.
 - Do not create sub-packages inside `tests`. Test module names must be unique across
   the repo (other than `__init__.py` and `conftest.py`).
 - Use the most modern Python idioms allowed by the minimum supported version
-  (currently Python 3.14). Once support broadens, remember to update the workflows
-  alongside the code.
-- Prefer readable names over comments. Docstrings belong on public functions when the
-  signature alone is not clear. Comments should be saved for unavoidable code smells,
-  temporary pins (with links), or opaque logic.
-- Keep imports at the top of modules unless a circular import would result.
+  (currently Python 3.10).
+- Comments should be kept to an absolute minimum, try to achieve code readability
+  through meaningful class, function, and variable names. Public functions should have
+  Google-style docstrings; parameters only need to be documented if the name and type
+  hint don't convey the full semantics. Private functions used within a module don't
+  need docstrings (unless their names and type hints aren't sufficient to convey their
+  semantics).
+- Comments should only be used to explain unavoidable code smells (arising from third
+  party package use), or the reason for temporary dependency version pinning (e.g.
+  linking an unresolved GitHub issues) or lastly explaining opaque code or non-obvious
+  trade offs or workarounds.
+- Please keep all imports at the top of the module unless necessary to avoid circular
+  imports
 - Prefer quick research (docs or web search) to validate tools/APIs before
   trial-and-error patches; it is usually faster and reduces churn.
 

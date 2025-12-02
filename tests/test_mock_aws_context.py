@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
+from moto import settings
 import pytest
 
 from aiomoto import mock_aws, mock_aws_decorator
@@ -84,16 +85,12 @@ async def test_mock_aws_decorator_no_args_async() -> None:
 
 
 def test_mock_aws_rejects_server_mode(monkeypatch: pytest.MonkeyPatch) -> None:
-    from moto import settings
-
     monkeypatch.setattr(settings, "TEST_SERVER_MODE", True)
     with pytest.raises(RuntimeError, match="in-process moto only"):
         mock_aws()
 
 
 def test_mock_aws_rejects_proxy_mode(monkeypatch: pytest.MonkeyPatch) -> None:
-    from moto import settings
-
     monkeypatch.setattr(settings, "is_test_proxy_mode", lambda: True)
     with pytest.raises(RuntimeError, match="in-process moto only"):
         mock_aws()

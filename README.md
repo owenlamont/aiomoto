@@ -186,3 +186,34 @@ The living roadmap sits in the wiki [Roadmap](https://github.com/owenlamont/aiom
   automatically as they use aiobotocore clients/resources.
 - We keep version ranges narrow and tested together, if you notice a new version of
   aiobotocore or moto that doesn't get covered feel free to raise an issue for this.
+- Pandas parquet on S3: when pyarrow is available the default path uses
+  `pyarrow.fs.S3FileSystem`, which bypasses aiobotocore/moto entirely. To stay
+  mockable, callers must force the fsspec path (e.g., pass `storage_options` or an
+  explicit `s3fs.S3FileSystem`). Native pyarrow S3 access is out of scope for aiomoto.
+- Polars parquet on S3 uses its Rust `object_store` S3 backend even when
+  `storage_options` are provided, so aiomoto cannot intercept those calls.
+
+### Pandas parquet example (mockable path)
+
+```python
+import pandas as pd
+import s3fs
+from aiomoto import mock_aws
+
+df = pd.DataFrame({"a": [1, 2], "b": ["x", "y"]})
+path = "s3://my-bucket/data.parquet"
+
+with mock_aws():
+    fs = s3fs.S3FileSystem(anon=False, asynchronous=False)
+    fs.call_s3("create_bucket", Bucket="my-bucket")
+
+    # Passing the filesystem instance forces pandas to use fsspec/s3fs instead of
+    # pyarrow.fs.S3FileSystem.
+    df.to_parquet(path, filesystem=fs)
+    roundtrip = pd.read_parquet(path, filesystem=fs)
+
+assert roundtrip.equals(df)
+```
+
+If `storage_options` are omitted, pandas with pyarrow installed will default to
+`pyarrow.fs.S3FileSystem`, which bypasses aiomoto and will reach real AWS.

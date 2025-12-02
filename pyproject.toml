@@ -1,6 +1,6 @@
 [project]
 name = "aiomoto"
-version = "0.0.9"
+version = "0.1.0"
 description = "Moto-style AWS service mocks for aiobotocore/aioboto3"
 readme = "README.md"
 authors = [
@@ -183,6 +183,9 @@ dev = [
     "s3fs>=2024.6.0",
     "pytest-randomly>=4.0.1",
     "pytest-xdist[psutil]>=3.8.0",
+    "pandas>=2.3.3",
+    "pyarrow>=22.0.0",
+    "pandas-stubs>=2.3.3.251201",
 ]
 
 [build-system]
