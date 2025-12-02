@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import asyncio
 
+import aiobotocore.session
 import pytest
+import s3fs  # type: ignore[import-untyped]
 
 from aiomoto import mock_aws
 
 
 @pytest.mark.asyncio
 async def test_s3fs_reads_and_closes_body() -> None:
-    import aiobotocore.session
-    import s3fs  # type: ignore[import-untyped]
-
     with mock_aws():
         session = aiobotocore.session.AioSession()
         fs = s3fs.S3FileSystem(
@@ -36,8 +35,6 @@ async def test_s3fs_reads_and_closes_body() -> None:
 
 
 def test_s3fs_sync_roundtrip() -> None:
-    import s3fs
-
     with mock_aws():
         fs = s3fs.S3FileSystem(anon=False, asynchronous=False)
         fs.connect()
