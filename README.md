@@ -186,3 +186,8 @@ The living roadmap sits in the wiki [Roadmap](https://github.com/owenlamont/aiom
   automatically as they use aiobotocore clients/resources.
 - We keep version ranges narrow and tested together, if you notice a new version of
   aiobotocore or moto that doesn't get covered feel free to raise an issue for this.
+- Pandas/Polars parquet on S3: when pyarrow is available their default paths use
+  `pyarrow.fs.S3FileSystem`, which bypasses aiobotocore/moto entirely, so aiomoto
+  cannot mock those calls. To stay mockable, callers must force the fsspec path
+  (e.g., provide `storage_options` or an explicit `s3fs.S3FileSystem`). Native
+  pyarrow S3 access is out of scope for aiomoto.

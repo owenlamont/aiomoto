@@ -33,3 +33,20 @@ async def test_s3fs_reads_and_closes_body() -> None:
 
         assert fs._s3 is not None
         await fs._s3.close()
+
+
+def test_s3fs_sync_roundtrip() -> None:
+    import s3fs
+
+    with mock_aws():
+        fs = s3fs.S3FileSystem(anon=False, asynchronous=False)
+        fs.connect()
+
+        fs.call_s3("create_bucket", Bucket="bucket-sync")
+        path = "bucket-sync/test-sync.txt"
+
+        with fs.open(path, "wb") as f:
+            f.write(b"hello\n")
+
+        with fs.open(path, "rb") as f:
+            assert f.read() == b"hello\n"
