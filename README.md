@@ -111,22 +111,16 @@ raw Moto decorators with aiomoto contexts in the same test to keep state aligned
 ### s3fs example
 
 ```python
-import asyncio
-import aiobotocore.session
-import pytest
 import s3fs
-
 from aiomoto import mock_aws
 
 
 def test_s3fs_sync_usage() -> None:
-    fs = s3fs.S3FileSystem(asynchronous=False, anon=False)
-
     with mock_aws():
+        fs = s3fs.S3FileSystem(asynchronous=False, anon=False)
         fs.call_s3("create_bucket", Bucket="bucket-123")
-        fs._call_s3("put_object", Bucket="bucket-123", Key="test.txt", Body=b"hi")
-        with fs.open("bucket-123/test.txt") as fh:
-            assert fh.read() == b"hi"
+        fs.call_s3("put_object", Bucket="bucket-123", Key="test.txt", Body=b"hi")
+        assert fs.cat("bucket-123/test.txt") == b"hi"
 ```
 
 ### DynamoDB example
