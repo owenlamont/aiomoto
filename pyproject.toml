@@ -1,6 +1,6 @@
 [project]
 name = "aiomoto"
-version = "0.0.9"
+version = "0.1.0"
 description = "Moto-style AWS service mocks for aiobotocore/aioboto3"
 readme = "README.md"
 authors = [
