@@ -10,13 +10,12 @@ from aiomoto import mock_aws
 def test_pandas_parquet_via_fsspec_storage_options() -> None:
     df = pd.DataFrame({"a": [1, 2], "b": ["x", "y"]})
     path = "s3://bucket-pandas/data.parquet"
-    storage_options = {"anon": False}
 
     with mock_aws():
         fs = s3fs.S3FileSystem(anon=False, asynchronous=False)
         fs.call_s3("create_bucket", Bucket="bucket-pandas")
 
-        df.to_parquet(path, storage_options=storage_options)
-        result = pd.read_parquet(path, storage_options=storage_options)
+        df.to_parquet(path, filesystem=fs)
+        result = pd.read_parquet(path, filesystem=fs)
 
     pdt.assert_frame_equal(result, df)

@@ -202,14 +202,15 @@ from aiomoto import mock_aws
 
 df = pd.DataFrame({"a": [1, 2], "b": ["x", "y"]})
 path = "s3://my-bucket/data.parquet"
-storage_options = {"anon": False}  # forces pandas onto fsspec/s3fs
 
 with mock_aws():
     fs = s3fs.S3FileSystem(anon=False, asynchronous=False)
     fs.call_s3("create_bucket", Bucket="my-bucket")
 
-    df.to_parquet(path, storage_options=storage_options)
-    roundtrip = pd.read_parquet(path, storage_options=storage_options)
+    # Passing the filesystem instance forces pandas to use fsspec/s3fs instead of
+    # pyarrow.fs.S3FileSystem.
+    df.to_parquet(path, filesystem=fs)
+    roundtrip = pd.read_parquet(path, filesystem=fs)
 
 assert roundtrip.equals(df)
 ```
