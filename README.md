@@ -108,39 +108,19 @@ raw Moto decorators with aiomoto contexts in the same test to keep state aligned
 > (`TEST_SERVER_MODE`, proxy mode) will raise at `mock_aws()` time so you don’t
 > accidentally depend on real network calls.
 
-### s3fs (async) example
-
-s3fs caches each `S3FileSystem` (unless `cacheable=False`) and installs a weakref
-finalizer that calls `close_session` on the loop captured at construction time.
-If that loop is already closed when the finalizer runs—e.g., pytest ends the
-session loop while a cached instance still lives—you can see ``Event loop is
-closed`` or “attached to a different loop” errors during teardown. Upstream switched to
-`get_running_loop` in 2025.3.1 to reduce this, but explicit close is still safest.
+### s3fs example
 
 ```python
-import asyncio
-import aiobotocore.session
-import pytest
 import s3fs
-
 from aiomoto import mock_aws
 
 
-@pytest.mark.asyncio
-async def test_s3fs_async_usage() -> None:
-    session = aiobotocore.session.AioSession()
-    fs = s3fs.S3FileSystem(asynchronous=True, session=session)
-
-    try:
-        with mock_aws():
-            await fs._call_s3("create_bucket", Bucket="bucket-123")
-            await fs._call_s3(
-                "put_object", Bucket="bucket-123", Key="test.txt", Body=b"hi"
-            )
-            assert await fs._cat_file("bucket-123/test.txt") == b"hi"
-    finally:
-        if fs._s3 is not None:
-            await fs._s3.close()
+def test_s3fs_sync_usage() -> None:
+    with mock_aws():
+        fs = s3fs.S3FileSystem(asynchronous=False, anon=False)
+        fs.call_s3("create_bucket", Bucket="bucket-123")
+        fs.call_s3("put_object", Bucket="bucket-123", Key="test.txt", Body=b"hi")
+        assert fs.cat("bucket-123/test.txt") == b"hi"
 ```
 
 ### DynamoDB example
@@ -174,25 +154,6 @@ async def demo():
             assert item["Item"]["pk"]["S"] == "from-sync"
 ```
 
-## Roadmap
-
-The living roadmap sits in the wiki [Roadmap](https://github.com/owenlamont/aiomoto/wiki/Roadmap)
-
-## Limitations
-
-- Mixing raw Moto decorators with `aiomoto.mock_aws` in the same test is unsupported;
-  the contexts manage shared state differently and can diverge.
-- aiomoto wraps moto and patches aiobotocore; aioboto3 and s3fs should be covered
-  automatically as they use aiobotocore clients/resources.
-- We keep version ranges narrow and tested together, if you notice a new version of
-  aiobotocore or moto that doesn't get covered feel free to raise an issue for this.
-- Pandas parquet on S3: when pyarrow is available the default path uses
-  `pyarrow.fs.S3FileSystem`, which bypasses aiobotocore/moto entirely. To stay
-  mockable, callers must force the fsspec path (e.g., pass `storage_options` or an
-  explicit `s3fs.S3FileSystem`). Native pyarrow S3 access is out of scope for aiomoto.
-- Polars parquet on S3 uses its Rust `object_store` S3 backend even when
-  `storage_options` are provided, so aiomoto cannot intercept those calls.
-
 ### Pandas parquet example (mockable path)
 
 ```python
@@ -215,5 +176,23 @@ with mock_aws():
 assert roundtrip.equals(df)
 ```
 
-If `storage_options` are omitted, pandas with pyarrow installed will default to
-`pyarrow.fs.S3FileSystem`, which bypasses aiomoto and will reach real AWS.
+## Roadmap
+
+The living roadmap sits in the wiki [Roadmap](https://github.com/owenlamont/aiomoto/wiki/Roadmap)
+
+## Limitations
+
+- Mixing raw Moto decorators with `aiomoto.mock_aws` in the same test is unsupported;
+  the contexts manage shared state differently and can diverge.
+- aiomoto wraps moto and patches aiobotocore; aioboto3 and s3fs should be covered
+  automatically as they use aiobotocore clients/resources.
+- We keep version ranges narrow and tested together, if you notice a new version of
+  aiobotocore or moto that doesn't get covered feel free to raise an issue for this.
+- s3fs caches filesystem instances; create them inside `mock_aws` and close them so
+  finalizers don’t hit a closed or different event loop.
+- Pandas parquet on S3: when pyarrow is available the default path uses
+  `pyarrow.fs.S3FileSystem`, which bypasses aiobotocore/moto entirely. To stay
+  mockable, callers must force the fsspec path (e.g., pass `storage_options` or an
+  explicit `s3fs.S3FileSystem`). Native pyarrow S3 access is out of scope for aiomoto.
+- Polars parquet on S3 uses its Rust `object_store` S3 backend even when
+  `storage_options` are provided, so aiomoto cannot intercept those calls.
