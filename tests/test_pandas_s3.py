@@ -16,7 +16,7 @@ if hasattr(sys, "_is_gil_enabled") and not sys._is_gil_enabled():  # pragma: no 
 
 import pandas as pd
 import pandas.testing as pdt
-import s3fs  # type: ignore[import-untyped]
+import s3fs
 
 from aiomoto import mock_aws
 

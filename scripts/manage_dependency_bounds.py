@@ -13,7 +13,7 @@ Workflow semantics:
 """
 
 import argparse
-from collections.abc import Iterable
+from collections.abc import MutableSequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -117,8 +117,10 @@ def loosen_item(value: str, bound: Bound) -> tuple[str, dict[str, str]]:
 
     snapshot: dict[str, str] = {}
     floor = MIN_LOWER.get(bound.base)
-    if lower or floor:
-        snapshot["lower"] = floor or lower
+    if floor is not None:
+        snapshot["lower"] = floor
+    elif lower is not None:
+        snapshot["lower"] = lower
     if upper:
         snapshot["upper"] = upper
 
@@ -190,14 +192,14 @@ def apply(
     return produced
 
 
-def collect_sections(doc: tomlkit.TOMLDocument) -> list[Iterable[str]]:
+def collect_sections(doc: tomlkit.TOMLDocument) -> list[MutableSequence[str]]:
     """Collect dependency arrays from project/optional/dep-groups.
 
     Returns:
         List of dependency arrays to mutate.
     """
 
-    sections: list[Iterable[str]] = []
+    sections: list[MutableSequence[str]] = []
     project = doc.get("project", {})
     sections.append(project.get("dependencies", []))
 
@@ -210,7 +212,7 @@ def collect_sections(doc: tomlkit.TOMLDocument) -> list[Iterable[str]]:
 
 
 def _process_section(
-    arr: Iterable[str],
+    arr: MutableSequence[str],
     fn,
     produced: dict[str, dict[str, str]],
     resolved: dict[str, str],
