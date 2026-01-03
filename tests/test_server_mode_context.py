@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import time
 from urllib import error, parse, request
 
@@ -61,11 +62,10 @@ def test_server_mode_nested_mismatch_rolls_back() -> None:
     with mock_aws(server_mode=True, auto_endpoint=AutoEndpointMode.FORCE) as outer:
         endpoint = outer.server_endpoint
         assert endpoint is not None
-        with (
-            pytest.raises(RuntimeError),
-            mock_aws(server_mode=True, auto_endpoint=AutoEndpointMode.IF_MISSING),
-        ):
-            pass
+        with pytest.raises(RuntimeError):
+            mock_aws(
+                server_mode=True, auto_endpoint=AutoEndpointMode.IF_MISSING
+            ).__enter__()
         _assert_server_up(endpoint)
     _assert_server_down(endpoint)
 
@@ -97,9 +97,38 @@ def test_server_mode_dependency_failure_restores_env(
         "aiomoto.context._ensure_server_dependencies", side_effect=_raise_missing
     )
 
-    with pytest.raises(RuntimeError, match="missing deps"), mock_aws(server_mode=True):
-        pass
+    with pytest.raises(RuntimeError, match="missing deps"):
+        mock_aws(server_mode=True).__enter__()
 
     assert os.environ["AWS_ACCESS_KEY_ID"] == "orig"
     assert "AWS_SECRET_ACCESS_KEY" not in os.environ
     assert "AWS_DEFAULT_REGION" not in os.environ
+
+
+def test_assert_server_up_rejects_invalid_scheme() -> None:
+    with pytest.raises(AssertionError, match="Unexpected moto server endpoint"):
+        _assert_server_up("ftp://example.com")
+
+
+def test_assert_server_down_raises_when_server_stays_up(mocker: MockerFixture) -> None:
+    mocker.patch.object(sys.modules[__name__], "_server_responding", return_value=True)
+    mocker.patch.object(time, "sleep")
+    with pytest.raises(AssertionError, match="still responding"):
+        _assert_server_down("http://example.com")
+
+
+def test_server_responding_returns_true(mocker: MockerFixture) -> None:
+    class _Response:
+        def __enter__(self) -> _Response:
+            return self
+
+        def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc: BaseException | None,
+            tb: object | None,
+        ) -> None:
+            return None
+
+    mocker.patch.object(request, "urlopen", return_value=_Response())
+    assert _server_responding("http://example.com") is True

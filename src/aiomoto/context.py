@@ -166,24 +166,13 @@ class _ServerModeState:
 
     def _start_server(self) -> None:
         self._env_snapshot = _snapshot_env()
-        server: Any | None = None
-        host: str | None = None
-        port: int | None = None
-        endpoint: str | None = None
-        success = False
         try:
             _ensure_server_dependencies()
             _apply_env_defaults()
             server, host, port, endpoint = self._create_server()
-            success = True
-        finally:
-            if not success:
-                if server is not None:
-                    with suppress(Exception):
-                        server.stop()
-                self._restore_env_snapshot()
-        if server is None or host is None or port is None or endpoint is None:
-            raise RuntimeError("aiomoto server-mode failed to start.")
+        except Exception:
+            self._restore_env_snapshot()
+            raise
         self._server = server
         self._host = host
         self._port = port
@@ -193,10 +182,17 @@ class _ServerModeState:
         from moto.moto_server.threaded_moto_server import ThreadedMotoServer
 
         server = ThreadedMotoServer(ip_address="127.0.0.1", port=0, verbose=False)
-        server.start()
-        host, port = server.get_host_and_port()
-        endpoint = f"http://{host}:{port}"
-        _healthcheck(endpoint)
+        success = False
+        try:
+            server.start()
+            host, port = server.get_host_and_port()
+            endpoint = f"http://{host}:{port}"
+            _healthcheck(endpoint)
+            success = True
+        finally:
+            if not success:
+                with suppress(Exception):
+                    server.stop()
         return server, host, port, endpoint
 
     def _restore_env_snapshot(self) -> None:
