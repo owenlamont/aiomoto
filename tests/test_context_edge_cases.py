@@ -17,6 +17,11 @@ from aiomoto.context import (
 from aiomoto.patches.server_mode import AutoEndpointMode
 
 
+def _require_server_deps() -> None:
+    pytest.importorskip("flask")
+    pytest.importorskip("flask_cors")
+
+
 def test_healthcheck_rejects_non_http_scheme() -> None:
     with pytest.raises(RuntimeError, match="http"):
         _healthcheck("ftp://example.com")
@@ -240,6 +245,7 @@ def test_start_in_process_core_none_after_start(
 
 
 def test_create_server_cleans_up_on_failure(mocker: MockerFixture) -> None:
+    _require_server_deps()
     stop = mocker.Mock()
 
     class _FakeServer:
