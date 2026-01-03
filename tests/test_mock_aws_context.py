@@ -86,11 +86,11 @@ async def test_mock_aws_decorator_no_args_async() -> None:
 
 def test_mock_aws_rejects_server_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "TEST_SERVER_MODE", True)
-    with pytest.raises(RuntimeError, match="in-process moto only"):
+    with pytest.raises(RuntimeError, match="server_mode must be enabled"):
         mock_aws()
 
 
 def test_mock_aws_rejects_proxy_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "is_test_proxy_mode", lambda: True)
-    with pytest.raises(RuntimeError, match="in-process moto only"):
+    with pytest.raises(RuntimeError, match="does not support Moto proxy mode"):
         mock_aws()

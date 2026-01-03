@@ -100,13 +100,42 @@ async def demo():
             assert any(b["Name"] == "example" for b in result["Buckets"])
 ```
 
-While aiomoto is active it prevents aiobotocore from issuing real HTTP calls; any
-attempts fall back to Moto and will raise if they escape the stubber. Avoid mixing
-raw Moto decorators with aiomoto contexts in the same test to keep state aligned.
+While aiomoto is active in in-process mode it prevents aiobotocore from issuing real
+HTTP calls; any attempts fall back to Moto and will raise if they escape the
+stubber. Avoid mixing raw Moto decorators with aiomoto contexts in the same test to
+keep state aligned.
 
-> aiomoto supports Moto’s **in-process** mode only. Moto server/proxy modes
-> (`TEST_SERVER_MODE`, proxy mode) will raise at `mock_aws()` time so you don’t
-> accidentally depend on real network calls.
+> aiomoto defaults to Moto’s **in-process** mode. Use
+> `mock_aws(server_mode=True)` to run a local Moto server without in-process
+> patches. In server mode, set `auto_endpoint` to control endpoint injection:
+> `force` (default), `if_missing`, or `disabled`. Moto proxy mode remains
+> unsupported. Server mode needs `moto[server]` installed.
+
+### Server mode example
+
+```python
+import boto3
+from aiomoto import AutoEndpointMode, mock_aws
+
+
+def test_server_mode_force() -> None:
+    with mock_aws(server_mode=True) as ctx:
+        client = boto3.client("s3")
+        assert client.meta.endpoint_url == ctx.server_endpoint
+        client.create_bucket(Bucket="server-mode")
+
+
+def test_server_mode_if_missing() -> None:
+    with mock_aws(server_mode=True, auto_endpoint=AutoEndpointMode.IF_MISSING):
+        client = boto3.client("s3", endpoint_url="http://example.com")
+        assert client.meta.endpoint_url == "http://example.com"
+
+
+def test_server_mode_disabled() -> None:
+    with mock_aws(server_mode=True, auto_endpoint=AutoEndpointMode.DISABLED) as ctx:
+        client = boto3.client("s3", endpoint_url=ctx.server_endpoint)
+        client.create_bucket(Bucket="server-mode-explicit")
+```
 
 ### s3fs example
 

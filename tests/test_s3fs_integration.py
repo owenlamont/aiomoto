@@ -4,7 +4,7 @@ import asyncio
 
 import aiobotocore.session
 import pytest
-import s3fs  # type: ignore[import-untyped]
+import s3fs
 
 from aiomoto import mock_aws
 

@@ -251,9 +251,9 @@ class CorePatcher:
             else:
                 return loop.create_task(coro)
 
-        AioHierarchicalEmitter.emit = _emit_wrapped  # type: ignore[assignment,method-assign]
+        AioHierarchicalEmitter.emit = _emit_wrapped
 
     def _restore_aio_emitter_emit(self) -> None:
         if self._original_aio_emitter_emit is not None:
-            AioHierarchicalEmitter.emit = self._original_aio_emitter_emit  # type: ignore[method-assign]
+            AioHierarchicalEmitter.emit = self._original_aio_emitter_emit
             self._original_aio_emitter_emit = None
