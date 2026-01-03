@@ -13,7 +13,7 @@ callables while sharing one implementation.
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
-from contextlib import AbstractAsyncContextManager, AbstractContextManager
+from contextlib import AbstractAsyncContextManager, AbstractContextManager, suppress
 from functools import wraps
 import importlib.util
 import inspect
@@ -143,29 +143,7 @@ class _ServerModeState:
                     "aiomoto server_mode cannot be combined with in-process mode."
                 )
             if self._count == 0:
-                self._env_snapshot = _snapshot_env()
-                _apply_env_defaults()
-                _ensure_server_dependencies()
-                from moto.moto_server.threaded_moto_server import ThreadedMotoServer
-
-                server = ThreadedMotoServer(
-                    ip_address="127.0.0.1", port=0, verbose=False
-                )
-                server.start()
-                host, port = server.get_host_and_port()
-                endpoint = f"http://{host}:{port}"
-                try:
-                    _healthcheck(endpoint)
-                except Exception:
-                    server.stop()
-                    if self._env_snapshot is not None:
-                        _restore_env(self._env_snapshot)
-                        self._env_snapshot = None
-                    raise
-                self._server = server
-                self._host = host
-                self._port = port
-                self._endpoint = endpoint
+                self._start_server()
             self._count += 1
             if self._host is None or self._port is None or self._endpoint is None:
                 raise RuntimeError("aiomoto server-mode failed to capture endpoint.")
@@ -184,9 +162,47 @@ class _ServerModeState:
             self._host = None
             self._port = None
             self._endpoint = None
-            if self._env_snapshot is not None:
-                _restore_env(self._env_snapshot)
-                self._env_snapshot = None
+            self._restore_env_snapshot()
+
+    def _start_server(self) -> None:
+        self._env_snapshot = _snapshot_env()
+        server: Any | None = None
+        host: str | None = None
+        port: int | None = None
+        endpoint: str | None = None
+        success = False
+        try:
+            _ensure_server_dependencies()
+            _apply_env_defaults()
+            server, host, port, endpoint = self._create_server()
+            success = True
+        finally:
+            if not success:
+                if server is not None:
+                    with suppress(Exception):
+                        server.stop()
+                self._restore_env_snapshot()
+        if server is None or host is None or port is None or endpoint is None:
+            raise RuntimeError("aiomoto server-mode failed to start.")
+        self._server = server
+        self._host = host
+        self._port = port
+        self._endpoint = endpoint
+
+    def _create_server(self) -> tuple[Any, str, int, str]:
+        from moto.moto_server.threaded_moto_server import ThreadedMotoServer
+
+        server = ThreadedMotoServer(ip_address="127.0.0.1", port=0, verbose=False)
+        server.start()
+        host, port = server.get_host_and_port()
+        endpoint = f"http://{host}:{port}"
+        _healthcheck(endpoint)
+        return server, host, port, endpoint
+
+    def _restore_env_snapshot(self) -> None:
+        if self._env_snapshot is not None:
+            _restore_env(self._env_snapshot)
+            self._env_snapshot = None
 
 
 _INPROCESS_STATE = _InProcessState()
@@ -274,11 +290,20 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
     def _start_server_mode(self) -> None:
         if self._depth == 0:
             host, port, endpoint = _SERVER_STATE.start()
-            self._server_host = host
-            self._server_port = port
-            self._server_endpoint = endpoint
-            if self._auto_endpoint is not AutoEndpointMode.DISABLED:
-                _SERVER_PATCHER.start(endpoint, self._auto_endpoint)
+            started = False
+            try:
+                self._server_host = host
+                self._server_port = port
+                self._server_endpoint = endpoint
+                if self._auto_endpoint is not AutoEndpointMode.DISABLED:
+                    _SERVER_PATCHER.start(endpoint, self._auto_endpoint)
+                started = True
+            finally:
+                if not started:
+                    _SERVER_STATE.stop()
+                    self._server_host = None
+                    self._server_port = None
+                    self._server_endpoint = None
         self._depth += 1
 
     def _start_in_process(self, reset: bool | None) -> None:

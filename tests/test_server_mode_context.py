@@ -5,8 +5,9 @@ import time
 from urllib import error, parse, request
 
 import pytest
+from pytest_mock import MockerFixture
 
-from aiomoto import mock_aws
+from aiomoto import AutoEndpointMode, mock_aws
 
 
 pytest.importorskip("flask")
@@ -56,6 +57,19 @@ def test_server_mode_nested_contexts_share_server() -> None:
     _assert_server_down(endpoint)
 
 
+def test_server_mode_nested_mismatch_rolls_back() -> None:
+    with mock_aws(server_mode=True, auto_endpoint=AutoEndpointMode.FORCE) as outer:
+        endpoint = outer.server_endpoint
+        assert endpoint is not None
+        with (
+            pytest.raises(RuntimeError),
+            mock_aws(server_mode=True, auto_endpoint=AutoEndpointMode.IF_MISSING),
+        ):
+            pass
+        _assert_server_up(endpoint)
+    _assert_server_down(endpoint)
+
+
 def test_server_mode_preserves_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AWS_ACCESS_KEY_ID", "orig")
     monkeypatch.delenv("AWS_SECRET_ACCESS_KEY", raising=False)
@@ -64,6 +78,28 @@ def test_server_mode_preserves_env(monkeypatch: pytest.MonkeyPatch) -> None:
         assert os.environ["AWS_ACCESS_KEY_ID"] == "orig"
         assert os.environ["AWS_SECRET_ACCESS_KEY"] == "test"  # noqa: S105
         assert os.environ["AWS_DEFAULT_REGION"] == "us-east-1"
+    assert os.environ["AWS_ACCESS_KEY_ID"] == "orig"
+    assert "AWS_SECRET_ACCESS_KEY" not in os.environ
+    assert "AWS_DEFAULT_REGION" not in os.environ
+
+
+def test_server_mode_dependency_failure_restores_env(
+    monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
+) -> None:
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "orig")
+    monkeypatch.delenv("AWS_SECRET_ACCESS_KEY", raising=False)
+    monkeypatch.delenv("AWS_DEFAULT_REGION", raising=False)
+
+    def _raise_missing() -> None:
+        raise RuntimeError("missing deps")
+
+    mocker.patch(
+        "aiomoto.context._ensure_server_dependencies", side_effect=_raise_missing
+    )
+
+    with pytest.raises(RuntimeError, match="missing deps"), mock_aws(server_mode=True):
+        pass
+
     assert os.environ["AWS_ACCESS_KEY_ID"] == "orig"
     assert "AWS_SECRET_ACCESS_KEY" not in os.environ
     assert "AWS_DEFAULT_REGION" not in os.environ
