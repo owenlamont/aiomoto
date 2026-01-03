@@ -33,7 +33,7 @@ boto3. The focus is a clean, reusable library API rather than a CLI entry point.
   pages in sync when behaviour changes.
 - **.complexipy.toml** – Complexipy configuration.
 - **.coveragerc** – Coverage path mappings.
-- **mypy.ini** – MyPy type checker configuration.
+- **ty.toml** – ty type checker configuration.
 - **pyproject.toml** – Package configuration (distribution metadata, optional
   extras, build backend, and dependency groups).
 - **.pre-commit-config.yaml** – Pre-commit linters and configuration.

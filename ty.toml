@@ -1,0 +1,20 @@
+[rules]
+redundant-cast = "error"
+unused-ignore-comment = "error"
+
+[[overrides]]
+include = [
+  "src/aiomoto/context.py",
+]
+
+[overrides.rules]
+invalid-await = "ignore"
+unused-ignore-comment = "ignore"
+
+[[overrides]]
+include = [
+  "src/aiomoto/patches/core.py",
+]
+
+[overrides.rules]
+invalid-assignment = "ignore"
