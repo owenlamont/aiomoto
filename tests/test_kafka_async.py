@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from contextlib import AbstractAsyncContextManager
+from typing import Any
 
 import aioboto3
 import pytest
@@ -8,14 +9,10 @@ import pytest
 from aiomoto import mock_aws
 
 
-if TYPE_CHECKING:
-    from aioboto3.client import ClientCreatorContext
-
-
 FAKE_TAGS = {"TestKey": "TestValue", "TestKey2": "TestValue2"}
 
 
-def _client(region: str) -> ClientCreatorContext[Any]:
+def _client(region: str) -> AbstractAsyncContextManager[Any]:
     return aioboto3.Session().client("kafka", region_name=region)
 
 
