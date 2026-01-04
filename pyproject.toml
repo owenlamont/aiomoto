@@ -169,6 +169,13 @@ xray = ["moto[xray]>=5.1.5,<=5.1.19"]
 pandas = [
     "pandas>=2.2.0,<=2.3.3",
 ]
+# Pinned while validating Polars server-mode shim:
+# https://github.com/owenlamont/aiomoto/issues/48
+# Python 3.14 support tracked upstream:
+# https://github.com/pola-rs/polars/issues/25035
+polars = [
+    "polars>=1.35.1,<=1.36.1 ; python_full_version < '3.14'",
+]
 
 [dependency-groups]
 dev = [
@@ -195,6 +202,11 @@ dev = [
     # Gated on Windows 3.14+ until pywin32 free-threaded wheels land:
     # https://github.com/mhammond/pywin32/issues/2303
     "moto[server]>=5.1.19 ; python_full_version < '3.14' or sys_platform != 'win32'",
+    # Pinned while validating Polars server-mode shim:
+    # https://github.com/owenlamont/aiomoto/issues/48
+    # Python 3.14 support tracked upstream:
+    # https://github.com/pola-rs/polars/issues/25035
+    "polars>=1.35.1,<=1.36.1 ; python_full_version < '3.14'",
 ]
 
 [build-system]

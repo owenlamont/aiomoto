@@ -51,6 +51,14 @@ def _is_s3_url(path: object) -> bool:
     return path.startswith(("s3://", "s3a://", "s3n://"))
 
 
+def _is_s3_source(source: object) -> bool:
+    if _is_s3_url(source):
+        return True
+    if isinstance(source, (list, tuple)):
+        return any(_is_s3_url(item) for item in source)
+    return False
+
+
 def _merge_path_style(config: Any | None) -> Any:
     path_style = Config(s3={"addressing_style": "path"})
     if config is None:
@@ -131,6 +139,83 @@ def _apply_pandas_storage_options(
     return options
 
 
+def _polars_storage_options_has_endpoint(storage_options: dict[str, Any]) -> bool:
+    for key, value in storage_options.items():
+        if value is None:
+            continue
+        if key.lower() in {
+            "endpoint_url",
+            "endpoint",
+            "aws_endpoint_url",
+            "aws_endpoint",
+        }:
+            return True
+    return False
+
+
+def _apply_polars_storage_options(
+    storage_options: dict[str, Any] | None, endpoint: str, mode: AutoEndpointMode
+) -> dict[str, Any] | None:
+    if mode is AutoEndpointMode.DISABLED:
+        return storage_options
+    if storage_options is None:
+        options: dict[str, Any] = {}
+    else:
+        if mode is AutoEndpointMode.IF_MISSING and _polars_storage_options_has_endpoint(
+            storage_options
+        ):
+            return storage_options
+        options = dict(storage_options)
+    options["endpoint_url"] = endpoint
+    options.setdefault("allow_http", "true")
+    options.setdefault("aws_region", _default_region())
+    access_key, secret_key, token = _default_creds()
+    options.setdefault("aws_access_key_id", access_key)
+    options.setdefault("aws_secret_access_key", secret_key)
+    if token is not None:
+        options.setdefault("aws_session_token", token)
+    options.setdefault("aws_virtual_hosted_style_request", "false")
+    return options
+
+
+def _polars_fsspec_has_endpoint(storage_options: dict[str, Any]) -> bool:
+    if storage_options.get("endpoint_url") is not None:
+        return True
+    client_kwargs = storage_options.get("client_kwargs")
+    if isinstance(client_kwargs, dict):
+        return client_kwargs.get("endpoint_url") is not None
+    return client_kwargs is not None
+
+
+def _apply_polars_fsspec_storage_options(
+    storage_options: dict[str, Any] | None, endpoint: str, mode: AutoEndpointMode
+) -> dict[str, Any] | None:
+    if mode is AutoEndpointMode.DISABLED:
+        return storage_options
+    if storage_options is None:
+        options: dict[str, Any] = {}
+    else:
+        if mode is AutoEndpointMode.IF_MISSING and _polars_fsspec_has_endpoint(
+            storage_options
+        ):
+            return storage_options
+        options = dict(storage_options)
+    options["endpoint_url"] = endpoint
+    options.setdefault("use_ssl", False)
+    access_key, secret_key, token = _default_creds()
+    options.setdefault("key", access_key)
+    options.setdefault("secret", secret_key)
+    if token is not None:
+        options.setdefault("token", token)
+    client_kwargs = options.get("client_kwargs")
+    if client_kwargs is None:
+        options["client_kwargs"] = {"region_name": _default_region()}
+    elif isinstance(client_kwargs, dict):
+        client_kwargs.setdefault("region_name", _default_region())
+    options.setdefault("config_kwargs", {"s3": {"addressing_style": "path"}})
+    return options
+
+
 def _pandas_modules() -> tuple[object, object] | None:
     if sysconfig.get_config_var("Py_GIL_DISABLED"):
         return None
@@ -145,12 +230,79 @@ def _pandas_modules() -> tuple[object, object] | None:
     return pandas_common, pandas_parquet
 
 
+def _polars_modules() -> tuple[object, type, type] | None:
+    if importlib.util.find_spec("polars") is None:
+        return None
+    polars = importlib.import_module("polars")
+    dataframe = getattr(polars, "DataFrame", None)
+    lazyframe = getattr(polars, "LazyFrame", None)
+    if dataframe is None or lazyframe is None:
+        return None
+    return polars, dataframe, lazyframe
+
+
 def _require_server_settings(
     endpoint: str | None, mode: AutoEndpointMode | None
 ) -> tuple[str, AutoEndpointMode]:
     if endpoint is None or mode is None:
         raise RuntimeError("aiomoto server_mode auto-endpoint not configured.")
     return endpoint, mode
+
+
+def _wrap_polars_io(
+    original: Callable[..., Any],
+    get_settings: Callable[[], tuple[str, AutoEndpointMode]],
+    source_arg: str,
+    apply_storage_options: Callable[
+        [dict[str, Any] | None, str, AutoEndpointMode], dict[str, Any] | None
+    ],
+) -> Callable[..., Any]:
+    signature = inspect.signature(original)
+
+    def _io_wrapper(*args: Any, **kwargs: Any) -> Any:
+        bound = signature.bind(*args, **kwargs)
+        bound.apply_defaults()
+        source = bound.arguments.get(source_arg)
+        if _is_s3_source(source):
+            endpoint, mode = get_settings()
+            bound.arguments["storage_options"] = apply_storage_options(
+                bound.arguments.get("storage_options"), endpoint, mode
+            )
+        return original(*bound.args, **bound.kwargs)
+
+    return _io_wrapper
+
+
+def _wrap_polars_write_ndjson(
+    original: Callable[..., Any],
+    get_settings: Callable[[], tuple[str, AutoEndpointMode]],
+) -> Callable[..., Any]:
+    signature = inspect.signature(original)
+
+    def _write_ndjson(*args: Any, **kwargs: Any) -> Any:
+        bound = signature.bind(*args, **kwargs)
+        bound.apply_defaults()
+        file = bound.arguments.get("file")
+        if not _is_s3_url(file):
+            return original(*bound.args, **bound.kwargs)
+        endpoint, mode = get_settings()
+        if mode is AutoEndpointMode.DISABLED:
+            return original(*bound.args, **bound.kwargs)
+        storage_options = _apply_polars_storage_options(None, endpoint, mode)
+        self_obj = bound.arguments.get("self")
+        if self_obj is None:
+            return original(*bound.args, **bound.kwargs)
+        from polars.lazyframe.opt_flags import QueryOptFlags
+
+        self_obj.lazy().sink_ndjson(
+            file,
+            storage_options=storage_options,
+            optimizations=QueryOptFlags._eager(),
+            engine="in-memory",
+        )
+        return None
+
+    return _write_ndjson
 
 
 def _wrap_pandas_get_filepath(
@@ -208,6 +360,9 @@ class ServerModePatcher:
         self._original_s3fs_init: Callable[..., Any] | None = None
         self._original_pandas_get_filepath: Callable[..., Any] | None = None
         self._original_pandas_get_path: Callable[..., Any] | None = None
+        self._original_polars_functions: dict[str, Callable[..., Any]] | None = None
+        self._original_polars_df_methods: dict[str, Callable[..., Any]] | None = None
+        self._original_polars_lazy_methods: dict[str, Callable[..., Any]] | None = None
 
     def start(self, endpoint: str, mode: AutoEndpointMode) -> None:
         """Apply auto-endpoint patches (refcounted).
@@ -223,6 +378,7 @@ class ServerModePatcher:
                 self._patch_aiobotocore()
                 self._patch_s3fs()
                 self._patch_pandas()
+                self._patch_polars()
             else:
                 if endpoint != self._endpoint or mode != self._mode:
                     raise RuntimeError(
@@ -239,6 +395,7 @@ class ServerModePatcher:
             self._count -= 1
             if self._count > 0:
                 return
+            self._restore_polars()
             self._restore_pandas()
             self._restore_s3fs()
             self._restore_aiobotocore()
@@ -391,3 +548,99 @@ class ServerModePatcher:
         setattr(pandas_parquet, path_name, self._original_pandas_get_path)
         self._original_pandas_get_filepath = None
         self._original_pandas_get_path = None
+
+    def _patch_polars(self) -> None:
+        if self._original_polars_functions is not None:
+            return
+        modules = _polars_modules()
+        if modules is None:
+            return
+        polars, dataframe, lazyframe = modules
+        self._original_polars_functions = {}
+        self._original_polars_df_methods = {}
+        self._original_polars_lazy_methods = {}
+
+        def _get_settings() -> tuple[str, AutoEndpointMode]:
+            return _require_server_settings(self._endpoint, self._mode)
+
+        module_targets = {
+            "read_parquet": ("source", _apply_polars_storage_options),
+            "scan_parquet": ("source", _apply_polars_storage_options),
+            "read_parquet_metadata": ("source", _apply_polars_storage_options),
+            "read_csv": ("source", _apply_polars_fsspec_storage_options),
+            "scan_csv": ("source", _apply_polars_storage_options),
+            "read_ipc": ("source", _apply_polars_fsspec_storage_options),
+            "scan_ipc": ("source", _apply_polars_storage_options),
+            "read_ndjson": ("source", _apply_polars_storage_options),
+            "scan_ndjson": ("source", _apply_polars_storage_options),
+        }
+        for name, (source_arg, apply_storage_options) in module_targets.items():
+            original = getattr(polars, name, None)
+            if original is None:
+                continue
+            self._original_polars_functions[name] = original
+            setattr(
+                polars,
+                name,
+                _wrap_polars_io(
+                    original, _get_settings, source_arg, apply_storage_options
+                ),
+            )
+
+        df_targets = {
+            "write_parquet": ("file", _apply_polars_storage_options),
+            "write_csv": ("file", _apply_polars_storage_options),
+            "write_ipc": ("file", _apply_polars_storage_options),
+            "write_ndjson": ("file", _apply_polars_storage_options),
+        }
+        for name, (source_arg, apply_storage_options) in df_targets.items():
+            original = getattr(dataframe, name, None)
+            if original is None:
+                continue
+            self._original_polars_df_methods[name] = original
+            if name == "write_ndjson":
+                wrapper = _wrap_polars_write_ndjson(original, _get_settings)
+            else:
+                wrapper = _wrap_polars_io(
+                    original, _get_settings, source_arg, apply_storage_options
+                )
+            setattr(dataframe, name, wrapper)
+
+        lazy_targets = {
+            "sink_parquet": ("path", _apply_polars_storage_options),
+            "sink_csv": ("path", _apply_polars_storage_options),
+            "sink_ipc": ("path", _apply_polars_storage_options),
+            "sink_ndjson": ("path", _apply_polars_storage_options),
+        }
+        for name, (source_arg, apply_storage_options) in lazy_targets.items():
+            original = getattr(lazyframe, name, None)
+            if original is None:
+                continue
+            self._original_polars_lazy_methods[name] = original
+            setattr(
+                lazyframe,
+                name,
+                _wrap_polars_io(
+                    original, _get_settings, source_arg, apply_storage_options
+                ),
+            )
+
+    def _restore_polars(self) -> None:
+        if self._original_polars_functions is None:
+            return
+        polars = importlib.import_module("polars")
+        for name, original in self._original_polars_functions.items():
+            setattr(polars, name, original)
+        self._original_polars_functions = None
+
+        dataframe = getattr(polars, "DataFrame", None)
+        if dataframe is not None and self._original_polars_df_methods is not None:
+            for name, original in self._original_polars_df_methods.items():
+                setattr(dataframe, name, original)
+        self._original_polars_df_methods = None
+
+        lazyframe = getattr(polars, "LazyFrame", None)
+        if lazyframe is not None and self._original_polars_lazy_methods is not None:
+            for name, original in self._original_polars_lazy_methods.items():
+                setattr(lazyframe, name, original)
+        self._original_polars_lazy_methods = None
