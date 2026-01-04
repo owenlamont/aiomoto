@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import sysconfig
 from types import ModuleType
 
 import pytest
@@ -21,6 +22,11 @@ from aiomoto.patches.server_mode import (
     AutoEndpointMode,
     ServerModePatcher,
 )
+
+
+def _skip_if_free_threaded() -> None:
+    if sysconfig.get_config_var("Py_GIL_DISABLED"):
+        pytest.skip("pandas patching disabled on free-threaded builds")
 
 
 def test_default_region_prefers_env(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -399,6 +405,7 @@ def test_require_server_settings_raises() -> None:
 def test_patch_pandas_injects_storage_options(
     monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
 ) -> None:
+    _skip_if_free_threaded()
     pandas_module = ModuleType("pandas")
     pandas_io = ModuleType("pandas.io")
     pandas_common = ModuleType("pandas.io.common")
@@ -460,6 +467,12 @@ def test_patch_pandas_noop_when_already_patched() -> None:
     patcher._original_pandas_get_filepath = _noop
     patcher._patch_pandas()
     assert _noop() is None
+
+
+def test_skip_if_free_threaded_skips(mocker: MockerFixture) -> None:
+    mocker.patch("sysconfig.get_config_var", return_value=1)
+    with pytest.raises(pytest.skip.Exception):
+        _skip_if_free_threaded()
 
 
 def test_restore_pandas_noop_when_missing() -> None:
