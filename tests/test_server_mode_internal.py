@@ -11,8 +11,13 @@ from aiomoto.patches.server_mode import (
     _apply_pandas_storage_options,
     _default_creds,
     _default_region,
+    _is_s3_url,
     _merge_path_style,
+    _pandas_modules,
+    _require_server_settings,
     _should_inject,
+    _wrap_pandas_get_filepath,
+    _wrap_pandas_get_path,
     AutoEndpointMode,
     ServerModePatcher,
 )
@@ -40,6 +45,14 @@ def test_should_inject_modes() -> None:
     assert _should_inject(AutoEndpointMode.FORCE, "http://x") is True
     assert _should_inject(AutoEndpointMode.IF_MISSING, None) is True
     assert _should_inject(AutoEndpointMode.IF_MISSING, "http://x") is False
+
+
+def test_is_s3_url_rejects_non_str() -> None:
+    assert _is_s3_url(123) is False
+
+
+def test_is_s3_url_accepts_s3_like() -> None:
+    assert _is_s3_url("s3://bucket/key") is True
 
 
 def test_merge_path_style_with_and_without_merge() -> None:
@@ -97,6 +110,39 @@ def test_apply_pandas_storage_options_injects_endpoint() -> None:
     client_kwargs = result["client_kwargs"]
     assert client_kwargs["endpoint_url"] == "http://server"
     assert client_kwargs["region_name"] == "us-east-1"
+
+
+def test_apply_pandas_storage_options_noop_when_disabled() -> None:
+    storage_options = {"client_kwargs": {"endpoint_url": "http://example.com"}}
+    result = _apply_pandas_storage_options(
+        storage_options, "http://server", AutoEndpointMode.DISABLED
+    )
+    assert result is storage_options
+
+
+def test_apply_pandas_storage_options_ignores_bad_client_kwargs() -> None:
+    storage_options = {"client_kwargs": "bad"}
+    result = _apply_pandas_storage_options(
+        storage_options, "http://server", AutoEndpointMode.FORCE
+    )
+    assert result is storage_options
+
+
+def test_apply_pandas_storage_options_preserves_region_and_creds() -> None:
+    storage_options = {
+        "client_kwargs": {
+            "endpoint_url": "http://example.com",
+            "region_name": "us-west-2",
+            "aws_access_key_id": "key",
+        }
+    }
+    result = _apply_pandas_storage_options(
+        storage_options, "http://server", AutoEndpointMode.FORCE
+    )
+    assert result is not None
+    client_kwargs = result["client_kwargs"]
+    assert client_kwargs["region_name"] == "us-west-2"
+    assert client_kwargs["aws_access_key_id"] == "key"
 
 
 def test_apply_client_defaults_skips_session_token_when_missing(
@@ -322,6 +368,27 @@ def test_patch_pandas_skips_when_missing(mocker: MockerFixture) -> None:
     assert patcher._original_pandas_get_filepath is None
 
 
+def test_pandas_modules_skip_when_fsspec_missing(mocker: MockerFixture) -> None:
+    mocker.patch(
+        "aiomoto.patches.server_mode.importlib.util.find_spec",
+        side_effect=[object(), None],
+    )
+    assert _pandas_modules() is None
+
+
+def test_pandas_modules_skip_when_s3fs_missing(mocker: MockerFixture) -> None:
+    mocker.patch(
+        "aiomoto.patches.server_mode.importlib.util.find_spec",
+        side_effect=[object(), object(), None],
+    )
+    assert _pandas_modules() is None
+
+
+def test_require_server_settings_raises() -> None:
+    with pytest.raises(RuntimeError, match="auto-endpoint not configured"):
+        _require_server_settings(None, None)
+
+
 def test_patch_pandas_injects_storage_options(
     monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
 ) -> None:
@@ -375,3 +442,92 @@ def test_patch_pandas_injects_storage_options(
     assert untouched is fs_options
 
     patcher._restore_pandas()
+
+
+def test_patch_pandas_noop_when_already_patched() -> None:
+    patcher = ServerModePatcher()
+
+    def _noop(*args: object, **kwargs: object) -> None:
+        return None
+
+    patcher._original_pandas_get_filepath = _noop
+    patcher._patch_pandas()
+    assert _noop() is None
+
+
+def test_restore_pandas_noop_when_missing() -> None:
+    patcher = ServerModePatcher()
+    patcher._restore_pandas()
+
+
+def test_wrap_pandas_get_filepath_injects_storage_options() -> None:
+    def _original(
+        filepath_or_buffer: object,
+        *args: object,
+        storage_options: dict[str, object] | None = None,
+        **kwargs: object,
+    ) -> dict[str, object] | None:
+        return storage_options
+
+    def _get_settings() -> tuple[str, AutoEndpointMode]:
+        return ("http://server", AutoEndpointMode.FORCE)
+
+    wrapper = _wrap_pandas_get_filepath(_original, _get_settings)
+    result = wrapper("s3://bucket/key")
+    assert result is not None
+    assert result["endpoint_url"] == "http://server"
+
+
+def test_wrap_pandas_get_filepath_noop_for_non_s3() -> None:
+    def _original(
+        filepath_or_buffer: object,
+        *args: object,
+        storage_options: dict[str, object] | None = None,
+        **kwargs: object,
+    ) -> dict[str, object] | None:
+        return storage_options
+
+    def _get_settings() -> tuple[str, AutoEndpointMode]:
+        return ("http://server", AutoEndpointMode.FORCE)
+
+    wrapper = _wrap_pandas_get_filepath(_original, _get_settings)
+    assert wrapper("file:///tmp/data.csv") is None
+
+
+def test_wrap_pandas_get_path_injects_storage_options() -> None:
+    def _original(
+        path_or_handle: object,
+        fs: object | None,
+        mode: str,
+        *args: object,
+        storage_options: dict[str, object] | None = None,
+        **kwargs: object,
+    ) -> dict[str, object] | None:
+        return storage_options
+
+    def _get_settings() -> tuple[str, AutoEndpointMode]:
+        return ("http://server", AutoEndpointMode.FORCE)
+
+    wrapper = _wrap_pandas_get_path(_original, _get_settings)
+    result = wrapper("s3://bucket/key", None, "rb")
+    assert result is not None
+    assert result["endpoint_url"] == "http://server"
+
+
+def test_wrap_pandas_get_path_noop_for_non_s3() -> None:
+    def _original(
+        path_or_handle: object,
+        fs: object | None,
+        mode: str,
+        *args: object,
+        storage_options: dict[str, object] | None = None,
+        **kwargs: object,
+    ) -> dict[str, object] | None:
+        return storage_options
+
+    def _get_settings() -> tuple[str, AutoEndpointMode]:
+        return ("http://server", AutoEndpointMode.FORCE)
+
+    wrapper = _wrap_pandas_get_path(_original, _get_settings)
+    options: dict[str, object] = {"client_kwargs": {"endpoint_url": "http://keep"}}
+    assert wrapper("data.csv", None, "rb", storage_options=options) is options
