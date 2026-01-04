@@ -182,6 +182,23 @@ def test_start_in_process_failure_cleans_up(
     assert state.active() is False
 
 
+def test_start_in_process_core_start_failure_cleans_up(
+    monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
+) -> None:
+    from aiomoto import context as context_module
+
+    state = _InProcessState()
+    monkeypatch.setattr(context_module, "_INPROCESS_STATE", state)
+    context = _MotoAsyncContext()
+    context._core = mocker.Mock()
+    mocker.patch.object(context._core, "start", side_effect=RuntimeError("boom"))
+    mocker.patch.object(context._core, "stop")
+    with pytest.raises(RuntimeError, match="boom"):
+        context._start_in_process(reset=None)
+    context._core.stop.assert_not_called()
+    assert state.active() is False
+
+
 def test_start_in_process_rejects_invalid_context_when_reused() -> None:
     context = _MotoAsyncContext()
     context._depth = 1
