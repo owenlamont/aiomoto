@@ -223,5 +223,5 @@ The living roadmap sits in the wiki [Roadmap](https://github.com/owenlamont/aiom
   finalizers don’t hit a closed or different event loop.
 - Pandas S3 I/O: in server mode, aiomoto patches pandas to route `s3://` through
   fsspec/s3fs when those dependencies are installed.
-- Polars parquet on S3 uses its Rust `object_store` S3 backend even when
-  `storage_options` are provided, so aiomoto cannot intercept those calls.
+- Polars S3 I/O is patched in server mode when polars is installed; aiomoto
+  injects `storage_options` for `s3://` paths following the `auto_endpoint` mode.
