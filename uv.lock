@@ -450,7 +450,7 @@ pinpoint = [
     { name = "moto" },
 ]
 polars = [
-    { name = "polars" },
+    { name = "polars", marker = "python_full_version < '3.14'" },
 ]
 polly = [
     { name = "moto" },
@@ -574,7 +574,7 @@ dev = [
     { name = "packaging" },
     { name = "pandas" },
     { name = "pandas-stubs" },
-    { name = "polars" },
+    { name = "polars", marker = "python_full_version < '3.14'" },
     { name = "pyarrow" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -712,7 +712,7 @@ requires-dist = [
     { name = "moto", extras = ["wafv2"], marker = "extra == 'wafv2'", specifier = ">=5.1.5,<=5.1.19" },
     { name = "moto", extras = ["xray"], marker = "extra == 'xray'", specifier = ">=5.1.5,<=5.1.19" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.2.0,<=2.3.3" },
-    { name = "polars", marker = "extra == 'polars'", specifier = ">=1.36.1,<=1.36.1" },
+    { name = "polars", marker = "python_full_version < '3.14' and extra == 'polars'", specifier = ">=1.36.1,<=1.36.1" },
 ]
 provides-extras = ["acm", "acmpca", "all", "amp", "apigateway", "apigatewayv2", "applicationautoscaling", "appsync", "athena", "autoscaling", "awslambda", "awslambda-simple", "backup", "batch", "batch-simple", "budgets", "ce", "cloudformation", "cloudfront", "cloudtrail", "cloudwatch", "codebuild", "codecommit", "codepipeline", "cognitoidentity", "cognitoidp", "comprehend", "config", "databrew", "datapipeline", "datasync", "dax", "dms", "ds", "dynamodb", "dynamodbstreams", "ebs", "ec2", "ec2instanceconnect", "ecr", "ecs", "efs", "eks", "elasticache", "elasticbeanstalk", "elastictranscoder", "elb", "elbv2", "emr", "emrcontainers", "emrserverless", "es", "events", "firehose", "forecast", "glacier", "glue", "greengrass", "guardduty", "iam", "inspector2", "iot", "iotdata", "ivs", "kinesis", "kinesisvideo", "kinesisvideoarchivedmedia", "kms", "logs", "managedblockchain", "mediaconnect", "medialive", "mediapackage", "mediastore", "mediastoredata", "meteringmarketplace", "mq", "opsworks", "organizations", "panorama", "personalize", "pinpoint", "polly", "proxy", "quicksight", "ram", "rds", "redshift", "redshiftdata", "rekognition", "resourcegroups", "resourcegroupstaggingapi", "route53", "route53resolver", "s3", "s3control", "s3crc32c", "sagemaker", "scheduler", "sdb", "secretsmanager", "server", "servicediscovery", "servicequotas", "ses", "signer", "sns", "sqs", "ssm", "ssoadmin", "stepfunctions", "sts", "support", "swf", "textract", "timestreamwrite", "transcribe", "wafv2", "xray", "pandas", "polars"]
 
@@ -726,7 +726,7 @@ dev = [
     { name = "packaging", specifier = ">=25.0" },
     { name = "pandas", specifier = ">=2.2.0,<=2.3.3" },
     { name = "pandas-stubs", specifier = ">=2.3.3.251201" },
-    { name = "polars", specifier = ">=1.36.1,<=1.36.1" },
+    { name = "polars", marker = "python_full_version < '3.14'", specifier = ">=1.36.1,<=1.36.1" },
     { name = "pyarrow", specifier = ">=22.0.0" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-asyncio", specifier = ">=0.25.2" },
