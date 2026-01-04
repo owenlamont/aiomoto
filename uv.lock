@@ -438,6 +438,7 @@ organizations = [
     { name = "moto" },
 ]
 pandas = [
+    { name = "moto", extra = ["server"] },
     { name = "pandas" },
 ]
 panorama = [
@@ -450,6 +451,7 @@ pinpoint = [
     { name = "moto" },
 ]
 polars = [
+    { name = "moto", extra = ["server"], marker = "python_full_version < '3.14'" },
     { name = "polars", marker = "python_full_version < '3.14'" },
 ]
 polly = [
@@ -693,6 +695,8 @@ requires-dist = [
     { name = "moto", extras = ["scheduler"], marker = "extra == 'scheduler'", specifier = ">=5.1.5,<=5.1.19" },
     { name = "moto", extras = ["sdb"], marker = "extra == 'sdb'", specifier = ">=5.1.5,<=5.1.19" },
     { name = "moto", extras = ["secretsmanager"], marker = "extra == 'secretsmanager'", specifier = ">=5.1.5,<=5.1.19" },
+    { name = "moto", extras = ["server"], marker = "python_full_version < '3.14' and extra == 'polars'", specifier = ">=5.1.5,<=5.1.19" },
+    { name = "moto", extras = ["server"], marker = "extra == 'pandas'", specifier = ">=5.1.5,<=5.1.19" },
     { name = "moto", extras = ["server"], marker = "extra == 'server'", specifier = ">=5.1.5,<=5.1.19" },
     { name = "moto", extras = ["servicediscovery"], marker = "extra == 'servicediscovery'", specifier = ">=5.1.5,<=5.1.19" },
     { name = "moto", extras = ["servicequotas"], marker = "extra == 'servicequotas'", specifier = ">=5.1.5,<=5.1.19" },

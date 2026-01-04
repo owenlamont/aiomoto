@@ -40,9 +40,15 @@ BOUNDS: tuple[Bound, ...] = (
     Bound("moto"),
     Bound("moto["),  # handles moto extras (prefix match)
     Bound("pandas"),
+    Bound("polars"),
 )
 SNAPSHOT_PATH = Path("artifacts/bounds_snapshot.json")
-MIN_LOWER = {"aiobotocore": "2.24.1", "moto": "5.1.5", "pandas": "2.2.0"}
+MIN_LOWER = {
+    "aiobotocore": "2.24.1",
+    "moto": "5.1.5",
+    "pandas": "2.2.0",
+    "polars": "1.35.1",
+}
 
 
 def parse_args() -> argparse.Namespace:
