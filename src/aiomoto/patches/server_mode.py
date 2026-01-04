@@ -80,20 +80,42 @@ def _apply_client_defaults(
     arguments["config"] = _merge_path_style(arguments.get("config"))
 
 
+def _pandas_client_kwargs(storage_options: dict[str, Any]) -> dict[str, Any] | None:
+    client_kwargs_value = storage_options.get("client_kwargs")
+    if client_kwargs_value is None:
+        return {}
+    if not isinstance(client_kwargs_value, dict):
+        return None
+    return dict(client_kwargs_value)
+
+
+def _storage_options_has_endpoint(storage_options: dict[str, Any]) -> bool:
+    if storage_options.get("endpoint_url") is not None:
+        return True
+    client_kwargs = _pandas_client_kwargs(storage_options)
+    if client_kwargs is None:
+        return True
+    return client_kwargs.get("endpoint_url") is not None
+
+
 def _apply_pandas_storage_options(
     storage_options: dict[str, Any] | None, endpoint: str, mode: AutoEndpointMode
 ) -> dict[str, Any] | None:
     if mode is AutoEndpointMode.DISABLED:
         return storage_options
-    if mode is AutoEndpointMode.IF_MISSING and storage_options is not None:
-        return storage_options
-    options = {} if storage_options is None else dict(storage_options)
-    client_kwargs_value = options.get("client_kwargs")
-    if client_kwargs_value is not None and not isinstance(client_kwargs_value, dict):
-        return storage_options
-    client_kwargs: dict[str, Any] = (
-        {} if client_kwargs_value is None else dict(client_kwargs_value)
-    )
+    if storage_options is None:
+        options: dict[str, Any] = {}
+        client_kwargs: dict[str, Any] = {}
+    else:
+        if mode is AutoEndpointMode.IF_MISSING and _storage_options_has_endpoint(
+            storage_options
+        ):
+            return storage_options
+        options = dict(storage_options)
+        client_kwargs_value = _pandas_client_kwargs(options)
+        if client_kwargs_value is None:
+            return storage_options
+        client_kwargs = client_kwargs_value
     client_kwargs["endpoint_url"] = endpoint
     if client_kwargs.get("region_name") is None:
         client_kwargs["region_name"] = _default_region()

@@ -14,9 +14,11 @@ from aiomoto.patches.server_mode import (
     _default_region,
     _is_s3_url,
     _merge_path_style,
+    _pandas_client_kwargs,
     _pandas_modules,
     _require_server_settings,
     _should_inject,
+    _storage_options_has_endpoint,
     _wrap_pandas_get_filepath,
     _wrap_pandas_get_path,
     AutoEndpointMode,
@@ -98,8 +100,63 @@ def test_apply_client_defaults_sets_region_and_creds(
     assert args["config"] is not None
 
 
+def test_pandas_client_kwargs_defaults_to_empty() -> None:
+    assert _pandas_client_kwargs({}) == {}
+
+
+def test_pandas_client_kwargs_returns_none_on_invalid() -> None:
+    assert _pandas_client_kwargs({"client_kwargs": "bad"}) is None
+
+
+def test_storage_options_has_endpoint_detects_top_level() -> None:
+    assert _storage_options_has_endpoint({"endpoint_url": "http://example.com"})
+
+
+def test_storage_options_has_endpoint_detects_client_kwargs() -> None:
+    assert _storage_options_has_endpoint(
+        {"client_kwargs": {"endpoint_url": "http://example.com"}}
+    )
+
+
+def test_storage_options_has_endpoint_false_when_missing() -> None:
+    assert not _storage_options_has_endpoint({"anon": False})
+
+
+def test_storage_options_has_endpoint_true_on_invalid_client_kwargs() -> None:
+    assert _storage_options_has_endpoint({"client_kwargs": "bad"})
+
+
 def test_apply_pandas_storage_options_respects_if_missing() -> None:
     storage_options = {"client_kwargs": {"endpoint_url": "http://example.com"}}
+    result = _apply_pandas_storage_options(
+        storage_options, "http://server", AutoEndpointMode.IF_MISSING
+    )
+    assert result is storage_options
+
+
+def test_apply_pandas_storage_options_respects_if_missing_top_level_endpoint() -> None:
+    storage_options = {"endpoint_url": "http://example.com"}
+    result = _apply_pandas_storage_options(
+        storage_options, "http://server", AutoEndpointMode.IF_MISSING
+    )
+    assert result is storage_options
+
+
+def test_apply_pandas_storage_options_injects_when_if_missing_without_endpoint() -> (
+    None
+):
+    storage_options = {"anon": False}
+    result = _apply_pandas_storage_options(
+        storage_options, "http://server", AutoEndpointMode.IF_MISSING
+    )
+    assert result is not None
+    assert result is not storage_options
+    assert result["endpoint_url"] == "http://server"
+    assert result["client_kwargs"]["endpoint_url"] == "http://server"
+
+
+def test_apply_pandas_storage_options_if_missing_ignores_bad_client_kwargs() -> None:
+    storage_options = {"client_kwargs": "bad"}
     result = _apply_pandas_storage_options(
         storage_options, "http://server", AutoEndpointMode.IF_MISSING
     )
