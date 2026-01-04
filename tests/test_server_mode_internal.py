@@ -368,6 +368,13 @@ def test_patch_pandas_skips_when_missing(mocker: MockerFixture) -> None:
     assert patcher._original_pandas_get_filepath is None
 
 
+def test_pandas_modules_skip_on_free_threaded(mocker: MockerFixture) -> None:
+    find_spec = mocker.patch("aiomoto.patches.server_mode.importlib.util.find_spec")
+    mocker.patch("aiomoto.patches.server_mode.sysconfig.get_config_var", return_value=1)
+    assert _pandas_modules() is None
+    find_spec.assert_not_called()
+
+
 def test_pandas_modules_skip_when_fsspec_missing(mocker: MockerFixture) -> None:
     mocker.patch(
         "aiomoto.patches.server_mode.importlib.util.find_spec",

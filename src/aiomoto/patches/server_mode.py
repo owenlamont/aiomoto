@@ -8,6 +8,7 @@ import importlib
 import importlib.util
 import inspect
 import os
+import sysconfig
 import threading
 from typing import Any
 
@@ -109,6 +110,8 @@ def _apply_pandas_storage_options(
 
 
 def _pandas_modules() -> tuple[object, object] | None:
+    if sysconfig.get_config_var("Py_GIL_DISABLED"):
+        return None
     if importlib.util.find_spec("pandas") is None:
         return None
     if importlib.util.find_spec("fsspec") is None:
