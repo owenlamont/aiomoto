@@ -174,7 +174,7 @@ pandas = [
 # Python 3.14 support tracked upstream:
 # https://github.com/pola-rs/polars/issues/25035
 polars = [
-    "polars>=1.36.1,<=1.36.1 ; python_full_version < '3.14'",
+    "polars>=1.35.1,<=1.36.1 ; python_full_version < '3.14'",
 ]
 
 [dependency-groups]
@@ -206,7 +206,7 @@ dev = [
     # https://github.com/owenlamont/aiomoto/issues/48
     # Python 3.14 support tracked upstream:
     # https://github.com/pola-rs/polars/issues/25035
-    "polars>=1.36.1,<=1.36.1 ; python_full_version < '3.14'",
+    "polars>=1.35.1,<=1.36.1 ; python_full_version < '3.14'",
 ]
 
 [build-system]
