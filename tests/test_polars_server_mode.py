@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import sys
+
 import boto3
 import pytest
 
@@ -8,6 +10,12 @@ from aiomoto import mock_aws
 
 pytest.importorskip("flask")
 pytest.importorskip("flask_cors")
+if sys.version_info >= (3, 14):  # pragma: no cover
+    pytest.skip(  # pragma: no cover
+        "Polars does not declare Python 3.14 support yet; "
+        "https://github.com/pola-rs/polars/issues/25035",
+        allow_module_level=True,
+    )
 pl = pytest.importorskip("polars")
 assert_frame_equal = pytest.importorskip("polars.testing").assert_frame_equal
 
