@@ -137,6 +137,30 @@ def test_server_mode_disabled() -> None:
         client.create_bucket(Bucket="server-mode-explicit")
 ```
 
+### Pandas S3 in server mode
+
+```python
+import boto3
+import pandas as pd
+from aiomoto import mock_aws
+
+
+def test_pandas_server_mode_csv() -> None:
+    df = pd.DataFrame({"a": [1, 2], "b": ["x", "y"]})
+    path = "s3://pandas-bucket/data.csv"
+
+    with mock_aws(server_mode=True):
+        boto3.client("s3").create_bucket(Bucket="pandas-bucket")
+        # aiomoto patches pandas + fsspec/s3fs so s3:// routes to Moto.
+        df.to_csv(path, index=False)
+        result = pd.read_csv(path)
+
+    assert result.equals(df)
+```
+
+Requires pandas + fsspec + s3fs for S3 access (pyarrow for parquet). You can
+install the pinned pandas extra via `aiomoto[pandas]`.
+
 ### s3fs example
 
 ```python
@@ -183,28 +207,6 @@ async def demo():
             assert item["Item"]["pk"]["S"] == "from-sync"
 ```
 
-### Pandas parquet example (mockable path)
-
-```python
-import pandas as pd
-import s3fs
-from aiomoto import mock_aws
-
-df = pd.DataFrame({"a": [1, 2], "b": ["x", "y"]})
-path = "s3://my-bucket/data.parquet"
-
-with mock_aws():
-    fs = s3fs.S3FileSystem(anon=False, asynchronous=False)
-    fs.call_s3("create_bucket", Bucket="my-bucket")
-
-    # Passing the filesystem instance forces pandas to use fsspec/s3fs instead of
-    # pyarrow.fs.S3FileSystem.
-    df.to_parquet(path, filesystem=fs)
-    roundtrip = pd.read_parquet(path, filesystem=fs)
-
-assert roundtrip.equals(df)
-```
-
 ## Roadmap
 
 The living roadmap sits in the wiki [Roadmap](https://github.com/owenlamont/aiomoto/wiki/Roadmap)
@@ -219,9 +221,7 @@ The living roadmap sits in the wiki [Roadmap](https://github.com/owenlamont/aiom
   aiobotocore or moto that doesn't get covered feel free to raise an issue for this.
 - s3fs caches filesystem instances; create them inside `mock_aws` and close them so
   finalizers don’t hit a closed or different event loop.
-- Pandas parquet on S3: when pyarrow is available the default path uses
-  `pyarrow.fs.S3FileSystem`, which bypasses aiobotocore/moto entirely. To stay
-  mockable, callers must force the fsspec path (e.g., pass `storage_options` or an
-  explicit `s3fs.S3FileSystem`). Native pyarrow S3 access is out of scope for aiomoto.
+- Pandas S3 I/O: in server mode, aiomoto patches pandas to route `s3://` through
+  fsspec/s3fs when those dependencies are installed.
 - Polars parquet on S3 uses its Rust `object_store` S3 backend even when
   `storage_options` are provided, so aiomoto cannot intercept those calls.

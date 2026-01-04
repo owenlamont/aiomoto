@@ -20,7 +20,7 @@ import inspect
 import os
 import threading
 from typing import Any, no_type_check, overload, ParamSpec, TypeVar
-from urllib import parse, request
+from urllib import error, parse, request
 
 from moto import settings
 from moto.core.decorator import mock_aws as moto_mock_aws
@@ -82,7 +82,7 @@ def _healthcheck(endpoint: str) -> None:
                 raise RuntimeError(
                     f"aiomoto server-mode healthcheck failed: {health_url}"
                 )
-    except Exception as exc:  # pragma: no cover - exercised via tests
+    except (error.URLError, OSError) as exc:  # pragma: no cover - exercised via tests
         raise RuntimeError(
             f"aiomoto server-mode healthcheck failed: {health_url}"
         ) from exc
@@ -307,8 +307,13 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
         if starting_new:
             _INPROCESS_STATE.enter()
             if self._core is None or not isinstance(self._moto_context, MockAWS):
+                _INPROCESS_STATE.exit()
                 raise RuntimeError("aiomoto in-process mode not initialized.")
-            self._core.start()
+            try:
+                self._core.start()
+            except Exception:
+                _INPROCESS_STATE.exit()
+                raise
         try:
             if not isinstance(self._moto_context, MockAWS):
                 raise RuntimeError("aiomoto in-process mode not initialized.")

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from enum import Enum
+import importlib
 import importlib.util
 import inspect
 import os
+import sysconfig
 import threading
 from typing import Any
 
@@ -43,6 +45,12 @@ def _should_inject(mode: AutoEndpointMode, endpoint_url: str | None) -> bool:
     return endpoint_url is None
 
 
+def _is_s3_url(path: object) -> bool:
+    if not isinstance(path, str):
+        return False
+    return path.startswith(("s3://", "s3a://", "s3n://"))
+
+
 def _merge_path_style(config: Any | None) -> Any:
     path_style = Config(s3={"addressing_style": "path"})
     if config is None:
@@ -72,6 +80,121 @@ def _apply_client_defaults(
     arguments["config"] = _merge_path_style(arguments.get("config"))
 
 
+def _pandas_client_kwargs(storage_options: dict[str, Any]) -> dict[str, Any] | None:
+    client_kwargs_value = storage_options.get("client_kwargs")
+    if client_kwargs_value is None:
+        return {}
+    if not isinstance(client_kwargs_value, dict):
+        return None
+    return dict(client_kwargs_value)
+
+
+def _storage_options_has_endpoint(storage_options: dict[str, Any]) -> bool:
+    if storage_options.get("endpoint_url") is not None:
+        return True
+    client_kwargs = _pandas_client_kwargs(storage_options)
+    if client_kwargs is None:
+        return True
+    return client_kwargs.get("endpoint_url") is not None
+
+
+def _apply_pandas_storage_options(
+    storage_options: dict[str, Any] | None, endpoint: str, mode: AutoEndpointMode
+) -> dict[str, Any] | None:
+    if mode is AutoEndpointMode.DISABLED:
+        return storage_options
+    if storage_options is None:
+        options: dict[str, Any] = {}
+        client_kwargs: dict[str, Any] = {}
+    else:
+        if mode is AutoEndpointMode.IF_MISSING and _storage_options_has_endpoint(
+            storage_options
+        ):
+            return storage_options
+        options = dict(storage_options)
+        client_kwargs_value = _pandas_client_kwargs(options)
+        if client_kwargs_value is None:
+            return storage_options
+        client_kwargs = client_kwargs_value
+    client_kwargs["endpoint_url"] = endpoint
+    if client_kwargs.get("region_name") is None:
+        client_kwargs["region_name"] = _default_region()
+    if client_kwargs.get("aws_access_key_id") is None:
+        access_key, secret_key, token = _default_creds()
+        client_kwargs["aws_access_key_id"] = access_key
+        client_kwargs["aws_secret_access_key"] = secret_key
+        if token is not None:
+            client_kwargs.setdefault("aws_session_token", token)
+    options["client_kwargs"] = client_kwargs
+    options.setdefault("endpoint_url", endpoint)
+    options.setdefault("use_ssl", False)
+    return options
+
+
+def _pandas_modules() -> tuple[object, object] | None:
+    if sysconfig.get_config_var("Py_GIL_DISABLED"):
+        return None
+    if importlib.util.find_spec("pandas") is None:
+        return None
+    if importlib.util.find_spec("fsspec") is None:
+        return None
+    if importlib.util.find_spec("s3fs") is None:
+        return None
+    pandas_common = importlib.import_module("pandas.io.common")
+    pandas_parquet = importlib.import_module("pandas.io.parquet")
+    return pandas_common, pandas_parquet
+
+
+def _require_server_settings(
+    endpoint: str | None, mode: AutoEndpointMode | None
+) -> tuple[str, AutoEndpointMode]:
+    if endpoint is None or mode is None:
+        raise RuntimeError("aiomoto server_mode auto-endpoint not configured.")
+    return endpoint, mode
+
+
+def _wrap_pandas_get_filepath(
+    original: Callable[..., Any],
+    get_settings: Callable[[], tuple[str, AutoEndpointMode]],
+) -> Callable[..., Any]:
+    signature = inspect.signature(original)
+
+    def _get_filepath_or_buffer(*args: Any, **kwargs: Any) -> Any:
+        bound = signature.bind(*args, **kwargs)
+        bound.apply_defaults()
+        endpoint, mode = get_settings()
+        path = bound.arguments.get("filepath_or_buffer")
+        if _is_s3_url(path):
+            bound.arguments["storage_options"] = _apply_pandas_storage_options(
+                bound.arguments.get("storage_options"), endpoint, mode
+            )
+        return original(*bound.args, **bound.kwargs)
+
+    return _get_filepath_or_buffer
+
+
+def _wrap_pandas_get_path(
+    original: Callable[..., Any],
+    get_settings: Callable[[], tuple[str, AutoEndpointMode]],
+) -> Callable[..., Any]:
+    signature = inspect.signature(original)
+
+    def _get_path_or_handle(*args: Any, **kwargs: Any) -> Any:
+        bound = signature.bind(*args, **kwargs)
+        bound.apply_defaults()
+        endpoint, mode = get_settings()
+        path = bound.arguments.get("path_or_handle") or bound.arguments.get("path")
+        if _is_s3_url(path):
+            fs = bound.arguments.get("fs")
+            if fs is None:
+                bound.arguments["storage_options"] = _apply_pandas_storage_options(
+                    bound.arguments.get("storage_options"), endpoint, mode
+                )
+        return original(*bound.args, **bound.kwargs)
+
+    return _get_path_or_handle
+
+
 class ServerModePatcher:
     """Patch client creation to auto-inject the moto server endpoint."""
 
@@ -83,6 +206,8 @@ class ServerModePatcher:
         self._original_botocore_create: Callable[..., Any] | None = None
         self._original_aio_create: Callable[..., Any] | None = None
         self._original_s3fs_init: Callable[..., Any] | None = None
+        self._original_pandas_get_filepath: Callable[..., Any] | None = None
+        self._original_pandas_get_path: Callable[..., Any] | None = None
 
     def start(self, endpoint: str, mode: AutoEndpointMode) -> None:
         """Apply auto-endpoint patches (refcounted).
@@ -97,6 +222,7 @@ class ServerModePatcher:
                 self._patch_botocore()
                 self._patch_aiobotocore()
                 self._patch_s3fs()
+                self._patch_pandas()
             else:
                 if endpoint != self._endpoint or mode != self._mode:
                     raise RuntimeError(
@@ -113,6 +239,7 @@ class ServerModePatcher:
             self._count -= 1
             if self._count > 0:
                 return
+            self._restore_pandas()
             self._restore_s3fs()
             self._restore_aiobotocore()
             self._restore_botocore()
@@ -191,6 +318,7 @@ class ServerModePatcher:
         signature = inspect.signature(original_init)
 
         def _init(fs_self: S3FileSystem, *args: Any, **kwargs: Any) -> None:
+            user_supplied = bool(kwargs) or len(args) > 0
             bound = signature.bind(fs_self, *args, **kwargs)
             bound.apply_defaults()
             endpoint_url = bound.arguments.get("endpoint_url")
@@ -202,6 +330,7 @@ class ServerModePatcher:
                 and client_kwargs is None
                 and config_kwargs is None
                 and _should_inject(self._mode, endpoint_url)
+                and (self._mode is AutoEndpointMode.FORCE or not user_supplied)
             ):
                 bound.arguments["endpoint_url"] = self._endpoint
                 bound.arguments["use_ssl"] = False
@@ -226,3 +355,39 @@ class ServerModePatcher:
         method_name = "__init__"
         setattr(S3FileSystem, method_name, self._original_s3fs_init)
         self._original_s3fs_init = None
+
+    def _patch_pandas(self) -> None:
+        if self._original_pandas_get_filepath is not None:
+            return
+        modules = _pandas_modules()
+        if modules is None:
+            return
+        pandas_common, pandas_parquet = modules
+        filepath_name = "_get_filepath_or_buffer"
+        path_name = "_get_path_or_handle"
+        self._original_pandas_get_filepath = getattr(pandas_common, filepath_name)
+        self._original_pandas_get_path = getattr(pandas_parquet, path_name)
+
+        def _get_settings() -> tuple[str, AutoEndpointMode]:
+            return _require_server_settings(self._endpoint, self._mode)
+
+        wrapped_get_filepath = _wrap_pandas_get_filepath(
+            self._original_pandas_get_filepath, _get_settings
+        )
+        wrapped_get_path = _wrap_pandas_get_path(
+            self._original_pandas_get_path, _get_settings
+        )
+        setattr(pandas_common, filepath_name, wrapped_get_filepath)
+        setattr(pandas_parquet, path_name, wrapped_get_path)
+
+    def _restore_pandas(self) -> None:
+        if self._original_pandas_get_filepath is None:
+            return
+        pandas_common = importlib.import_module("pandas.io.common")
+        pandas_parquet = importlib.import_module("pandas.io.parquet")
+        filepath_name = "_get_filepath_or_buffer"
+        path_name = "_get_path_or_handle"
+        setattr(pandas_common, filepath_name, self._original_pandas_get_filepath)
+        setattr(pandas_parquet, path_name, self._original_pandas_get_path)
+        self._original_pandas_get_filepath = None
+        self._original_pandas_get_path = None
