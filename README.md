@@ -47,6 +47,36 @@ worrying about port clashes or race conditions). In short I don't want any serve
 want aiomoto to support the moto like mock contexts in the same thread / process as the
 tests run in.
 
+## Installation
+
+```bash
+pip install aiomoto
+```
+
+aiomoto exposes the same Moto service extras, so you can install Moto plus the
+dependencies required for the specific AWS services you use (for example
+`aiomoto[s3]`, `aiomoto[dynamodb]`, or `aiomoto[all]`). Moto's extras are
+service selectors for dependency sets (use `moto[all]` if you want everything),
+rather than features provided by aiomoto itself. See the Moto install guide:
+[Moto install guide](https://docs.getmoto.org/en/latest/docs/getting_started.html)
+
+aiomoto-specific extras like `pandas` and `polars` behave like standard optional
+dependencies, adding those libraries and their support stack on top of Moto.
+
+Server mode requires Moto's server extra:
+
+```bash
+pip install "aiomoto[server]"
+```
+
+Pandas and Polars integrations are optional extras that add their own
+dependencies:
+
+```bash
+pip install "aiomoto[pandas]"
+pip install "aiomoto[polars]"
+```
+
 ## Usage
 
 Use `aiomoto.mock_aws` as a drop-in replacement for Moto's `mock_aws` that works
@@ -110,6 +140,10 @@ keep state aligned.
 > patches. In server mode, set `auto_endpoint` to control endpoint injection:
 > `force` (default), `if_missing`, or `disabled`. Moto proxy mode remains
 > unsupported. Server mode needs `moto[server]` installed.
+>
+> Server mode is typically slower than in-process mode, but it enables
+> compatibility with Pandas and Polars S3 I/O (and other tooling that expects a
+> real endpoint).
 
 ### Server mode example
 

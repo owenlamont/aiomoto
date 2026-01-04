@@ -1,6 +1,6 @@
 [project]
 name = "aiomoto"
-version = "0.1.1"
+version = "0.2.0"
 description = "Moto-style AWS service mocks for aiobotocore/aioboto3"
 readme = "README.md"
 authors = [
@@ -167,6 +167,7 @@ xray = ["moto[xray]>=5.1.5,<=5.1.19"]
 # Pinned until pandas 3.14/free-threaded support stabilizes:
 # https://github.com/pandas-dev/pandas/issues/62261
 pandas = [
+    "moto[server]>=5.1.5,<=5.1.19",
     "pandas>=2.2.0,<=2.3.3",
 ]
 # Pinned while validating Polars server-mode shim:
@@ -174,6 +175,7 @@ pandas = [
 # Python 3.14 support tracked upstream:
 # https://github.com/pola-rs/polars/issues/25035
 polars = [
+    "moto[server]>=5.1.5,<=5.1.19 ; python_full_version < '3.14'",
     "polars>=1.35.1,<=1.36.1 ; python_full_version < '3.14'",
 ]
 
