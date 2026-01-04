@@ -437,6 +437,9 @@ opsworks = [
 organizations = [
     { name = "moto" },
 ]
+pandas = [
+    { name = "pandas" },
+]
 panorama = [
     { name = "moto" },
 ]
@@ -704,8 +707,9 @@ requires-dist = [
     { name = "moto", extras = ["transcribe"], marker = "extra == 'transcribe'", specifier = ">=5.1.5,<=5.1.19" },
     { name = "moto", extras = ["wafv2"], marker = "extra == 'wafv2'", specifier = ">=5.1.5,<=5.1.19" },
     { name = "moto", extras = ["xray"], marker = "extra == 'xray'", specifier = ">=5.1.5,<=5.1.19" },
+    { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.3.3,<=2.3.3" },
 ]
-provides-extras = ["acm", "acmpca", "all", "amp", "apigateway", "apigatewayv2", "applicationautoscaling", "appsync", "athena", "autoscaling", "awslambda", "awslambda-simple", "backup", "batch", "batch-simple", "budgets", "ce", "cloudformation", "cloudfront", "cloudtrail", "cloudwatch", "codebuild", "codecommit", "codepipeline", "cognitoidentity", "cognitoidp", "comprehend", "config", "databrew", "datapipeline", "datasync", "dax", "dms", "ds", "dynamodb", "dynamodbstreams", "ebs", "ec2", "ec2instanceconnect", "ecr", "ecs", "efs", "eks", "elasticache", "elasticbeanstalk", "elastictranscoder", "elb", "elbv2", "emr", "emrcontainers", "emrserverless", "es", "events", "firehose", "forecast", "glacier", "glue", "greengrass", "guardduty", "iam", "inspector2", "iot", "iotdata", "ivs", "kinesis", "kinesisvideo", "kinesisvideoarchivedmedia", "kms", "logs", "managedblockchain", "mediaconnect", "medialive", "mediapackage", "mediastore", "mediastoredata", "meteringmarketplace", "mq", "opsworks", "organizations", "panorama", "personalize", "pinpoint", "polly", "proxy", "quicksight", "ram", "rds", "redshift", "redshiftdata", "rekognition", "resourcegroups", "resourcegroupstaggingapi", "route53", "route53resolver", "s3", "s3control", "s3crc32c", "sagemaker", "scheduler", "sdb", "secretsmanager", "server", "servicediscovery", "servicequotas", "ses", "signer", "sns", "sqs", "ssm", "ssoadmin", "stepfunctions", "sts", "support", "swf", "textract", "timestreamwrite", "transcribe", "wafv2", "xray"]
+provides-extras = ["acm", "acmpca", "all", "amp", "apigateway", "apigatewayv2", "applicationautoscaling", "appsync", "athena", "autoscaling", "awslambda", "awslambda-simple", "backup", "batch", "batch-simple", "budgets", "ce", "cloudformation", "cloudfront", "cloudtrail", "cloudwatch", "codebuild", "codecommit", "codepipeline", "cognitoidentity", "cognitoidp", "comprehend", "config", "databrew", "datapipeline", "datasync", "dax", "dms", "ds", "dynamodb", "dynamodbstreams", "ebs", "ec2", "ec2instanceconnect", "ecr", "ecs", "efs", "eks", "elasticache", "elasticbeanstalk", "elastictranscoder", "elb", "elbv2", "emr", "emrcontainers", "emrserverless", "es", "events", "firehose", "forecast", "glacier", "glue", "greengrass", "guardduty", "iam", "inspector2", "iot", "iotdata", "ivs", "kinesis", "kinesisvideo", "kinesisvideoarchivedmedia", "kms", "logs", "managedblockchain", "mediaconnect", "medialive", "mediapackage", "mediastore", "mediastoredata", "meteringmarketplace", "mq", "opsworks", "organizations", "panorama", "personalize", "pinpoint", "polly", "proxy", "quicksight", "ram", "rds", "redshift", "redshiftdata", "rekognition", "resourcegroups", "resourcegroupstaggingapi", "route53", "route53resolver", "s3", "s3control", "s3crc32c", "sagemaker", "scheduler", "sdb", "secretsmanager", "server", "servicediscovery", "servicequotas", "ses", "signer", "sns", "sqs", "ssm", "ssoadmin", "stepfunctions", "sts", "support", "swf", "textract", "timestreamwrite", "transcribe", "wafv2", "xray", "pandas"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -715,7 +719,7 @@ dev = [
     { name = "freezegun", specifier = ">=1.5.1" },
     { name = "moto", extras = ["server"], marker = "python_full_version < '3.14' or sys_platform != 'win32'", specifier = ">=5.1.19" },
     { name = "packaging", specifier = ">=25.0" },
-    { name = "pandas", specifier = ">=2.3.3" },
+    { name = "pandas", specifier = ">=2.3.3,<=2.3.3" },
     { name = "pandas-stubs", specifier = ">=2.3.3.251201" },
     { name = "pyarrow", specifier = ">=22.0.0" },
     { name = "pytest", specifier = ">=8.3.4" },

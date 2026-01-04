@@ -8,6 +8,7 @@ from pytest_mock import MockerFixture
 
 from aiomoto.patches.server_mode import (
     _apply_client_defaults,
+    _apply_pandas_storage_options,
     _default_creds,
     _default_region,
     _merge_path_style,
@@ -76,6 +77,26 @@ def test_apply_client_defaults_sets_region_and_creds(
     assert args["aws_secret_access_key"] == "test"  # noqa: S105
     assert args["aws_session_token"] == "token"  # noqa: S105
     assert args["config"] is not None
+
+
+def test_apply_pandas_storage_options_respects_if_missing() -> None:
+    storage_options = {"client_kwargs": {"endpoint_url": "http://example.com"}}
+    result = _apply_pandas_storage_options(
+        storage_options, "http://server", AutoEndpointMode.IF_MISSING
+    )
+    assert result is storage_options
+
+
+def test_apply_pandas_storage_options_injects_endpoint() -> None:
+    result = _apply_pandas_storage_options(
+        None, "http://server", AutoEndpointMode.FORCE
+    )
+    assert result is not None
+    assert result["endpoint_url"] == "http://server"
+    assert result["use_ssl"] is False
+    client_kwargs = result["client_kwargs"]
+    assert client_kwargs["endpoint_url"] == "http://server"
+    assert client_kwargs["region_name"] == "us-east-1"
 
 
 def test_apply_client_defaults_skips_session_token_when_missing(
@@ -251,3 +272,106 @@ def test_patch_s3fs_does_not_override_user_kwargs(
     fs = s3fs_core.S3FileSystem(client_kwargs={"region_name": "us-east-1"})
     assert fs.client_kwargs == {"region_name": "us-east-1"}
     patcher._restore_s3fs()
+
+
+def test_patch_s3fs_if_missing_respects_user_kwargs(
+    monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
+) -> None:
+    class _S3FileSystem:  # noqa: B903
+        def __init__(
+            self,
+            *,
+            anon: bool | None = None,
+            endpoint_url: str | None = None,
+            client_kwargs: dict[str, object] | None = None,
+            config_kwargs: dict[str, object] | None = None,
+            use_ssl: bool | None = None,
+        ) -> None:
+            self.anon = anon
+            self.endpoint_url = endpoint_url
+            self.client_kwargs = client_kwargs
+            self.config_kwargs = config_kwargs
+            self.use_ssl = use_ssl
+
+    s3fs_module = ModuleType("s3fs")
+    s3fs_core = ModuleType("s3fs.core")
+    attr_name = "S3FileSystem"
+    setattr(s3fs_core, attr_name, _S3FileSystem)
+    monkeypatch.setitem(sys.modules, "s3fs", s3fs_module)
+    monkeypatch.setitem(sys.modules, "s3fs.core", s3fs_core)
+    mocker.patch(
+        "aiomoto.patches.server_mode.importlib.util.find_spec", return_value=object()
+    )
+
+    patcher = ServerModePatcher()
+    patcher._endpoint = "http://localhost:5000"
+    patcher._mode = AutoEndpointMode.IF_MISSING
+    patcher._patch_s3fs()
+    fs = s3fs_core.S3FileSystem(anon=True)
+    assert fs.endpoint_url is None
+    assert fs.client_kwargs is None
+    patcher._restore_s3fs()
+
+
+def test_patch_pandas_skips_when_missing(mocker: MockerFixture) -> None:
+    patcher = ServerModePatcher()
+    mocker.patch(
+        "aiomoto.patches.server_mode.importlib.util.find_spec", return_value=None
+    )
+    patcher._patch_pandas()
+    assert patcher._original_pandas_get_filepath is None
+
+
+def test_patch_pandas_injects_storage_options(
+    monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
+) -> None:
+    pandas_module = ModuleType("pandas")
+    pandas_io = ModuleType("pandas.io")
+    pandas_common = ModuleType("pandas.io.common")
+    pandas_parquet = ModuleType("pandas.io.parquet")
+
+    def _get_filepath_or_buffer(
+        filepath_or_buffer: object,
+        encoding: str = "utf-8",
+        compression: object | None = None,
+        mode: str = "r",
+        storage_options: dict[str, object] | None = None,
+    ) -> dict[str, object] | None:
+        return storage_options
+
+    def _get_path_or_handle(
+        path_or_handle: object,
+        fs: object | None,
+        mode: str,
+        storage_options: dict[str, object] | None = None,
+    ) -> dict[str, object] | None:
+        return storage_options
+
+    filepath_name = "_get_filepath_or_buffer"
+    path_name = "_get_path_or_handle"
+    setattr(pandas_common, filepath_name, _get_filepath_or_buffer)
+    setattr(pandas_parquet, path_name, _get_path_or_handle)
+    monkeypatch.setitem(sys.modules, "pandas", pandas_module)
+    monkeypatch.setitem(sys.modules, "pandas.io", pandas_io)
+    monkeypatch.setitem(sys.modules, "pandas.io.common", pandas_common)
+    monkeypatch.setitem(sys.modules, "pandas.io.parquet", pandas_parquet)
+    mocker.patch(
+        "aiomoto.patches.server_mode.importlib.util.find_spec", return_value=object()
+    )
+
+    patcher = ServerModePatcher()
+    patcher._endpoint = "http://localhost:5000"
+    patcher._mode = AutoEndpointMode.FORCE
+    patcher._patch_pandas()
+
+    get_filepath = getattr(pandas_common, filepath_name)
+    get_path = getattr(pandas_parquet, path_name)
+    options = get_filepath("s3://bucket/key")
+    assert options is not None
+    assert options["endpoint_url"] == "http://localhost:5000"
+
+    fs_options = {"client_kwargs": {"endpoint_url": "http://example.com"}}
+    untouched = get_path("s3://bucket/key", object(), "rb", fs_options)
+    assert untouched is fs_options
+
+    patcher._restore_pandas()
