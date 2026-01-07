@@ -15,6 +15,8 @@ from typing import Any
 from botocore.config import Config
 from botocore.session import Session as BotocoreSession
 
+from aiomoto.exceptions import AutoEndpointError
+
 
 class AutoEndpointMode(str, Enum):
     FORCE = "force"
@@ -245,7 +247,7 @@ def _require_server_settings(
     endpoint: str | None, mode: AutoEndpointMode | None
 ) -> tuple[str, AutoEndpointMode]:
     if endpoint is None or mode is None:
-        raise RuntimeError("aiomoto server_mode auto-endpoint not configured.")
+        raise AutoEndpointError("aiomoto server_mode auto-endpoint not configured.")
     return endpoint, mode
 
 
@@ -368,7 +370,7 @@ class ServerModePatcher:
         """Apply auto-endpoint patches (refcounted).
 
         Raises:
-            RuntimeError: If the active server-mode settings change mid-flight.
+            AutoEndpointError: If the active server-mode settings change mid-flight.
         """
         with self._lock:
             if self._count == 0:
@@ -381,7 +383,7 @@ class ServerModePatcher:
                 self._patch_polars()
             else:
                 if endpoint != self._endpoint or mode != self._mode:
-                    raise RuntimeError(
+                    raise AutoEndpointError(
                         "aiomoto server_mode auto-endpoint settings changed while "
                         "active."
                     )
@@ -416,7 +418,9 @@ class ServerModePatcher:
             bound = signature.bind(session_self, *args, **kwargs)
             bound.apply_defaults()
             if self._endpoint is None or self._mode is None:
-                raise RuntimeError("aiomoto server_mode auto-endpoint not configured.")
+                raise AutoEndpointError(
+                    "aiomoto server_mode auto-endpoint not configured."
+                )
             _apply_client_defaults(bound.arguments, self._endpoint, self._mode)
             return original_create_client(*bound.args, **bound.kwargs)
 
@@ -447,7 +451,9 @@ class ServerModePatcher:
             bound = signature.bind(session_self, *args, **kwargs)
             bound.apply_defaults()
             if self._endpoint is None or self._mode is None:
-                raise RuntimeError("aiomoto server_mode auto-endpoint not configured.")
+                raise AutoEndpointError(
+                    "aiomoto server_mode auto-endpoint not configured."
+                )
             _apply_client_defaults(bound.arguments, self._endpoint, self._mode)
             return await original_create_client(*bound.args, **bound.kwargs)
 

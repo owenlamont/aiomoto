@@ -7,6 +7,7 @@ from types import ModuleType
 import pytest
 from pytest_mock import MockerFixture
 
+from aiomoto.exceptions import AutoEndpointError
 from aiomoto.patches.server_mode import (
     _apply_client_defaults,
     _apply_pandas_storage_options,
@@ -404,7 +405,7 @@ def test_patched_botocore_requires_config() -> None:
     patcher._patch_botocore()
     from botocore.session import Session as BotocoreSession
 
-    with pytest.raises(RuntimeError, match="auto-endpoint not configured"):
+    with pytest.raises(AutoEndpointError, match="auto-endpoint not configured"):
         BotocoreSession().create_client("s3")
     patcher._restore_botocore()
 
@@ -437,7 +438,7 @@ async def test_aiobotocore_patched_requires_config() -> None:
     patcher._patch_aiobotocore()
     method_name = "_create_client"
     create_client = getattr(AioSession(), method_name)
-    with pytest.raises(RuntimeError, match="auto-endpoint not configured"):
+    with pytest.raises(AutoEndpointError, match="auto-endpoint not configured"):
         await create_client("s3")
     patcher._restore_aiobotocore()
 
@@ -636,7 +637,7 @@ def test_pandas_modules_skip_when_s3fs_missing(mocker: MockerFixture) -> None:
 
 
 def test_require_server_settings_raises() -> None:
-    with pytest.raises(RuntimeError, match="auto-endpoint not configured"):
+    with pytest.raises(AutoEndpointError, match="auto-endpoint not configured"):
         _require_server_settings(None, None)
 
 

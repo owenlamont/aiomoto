@@ -1,6 +1,6 @@
 [project]
 name = "aiomoto"
-version = "0.2.0"
+version = "0.3.0"
 description = "Moto-style AWS service mocks for aiobotocore/aioboto3"
 readme = "README.md"
 authors = [
@@ -20,6 +20,8 @@ keywords = [
 dependencies = [
     "aiobotocore>=2.24.1,<=2.25.1",
     "moto>=5.1.5,<=5.1.19",
+    "orjson>=3.11.5",
+    "platformdirs>=4.0.0",
 ]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",

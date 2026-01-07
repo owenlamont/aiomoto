@@ -145,6 +145,25 @@ keep state aligned.
 > compatibility with Pandas and Polars S3 I/O (and other tooling that expects a
 > real endpoint).
 
+Server mode can also attach to an existing server by passing a `server_port`.
+This keeps the context in “client mode” (no server start/stop) while still
+injecting the endpoint. When aiomoto starts a server it records a registry file
+under `AIOMOTO_SERVER_REGISTRY_DIR` and exposes the path via
+`ctx.server_registry_path`.
+
+Registry files use the pattern
+`${AIOMOTO_SERVER_REGISTRY_DIR}/aiomoto-server-<uuid>.json`
+and contain payloads like:
+
+```json
+{
+  "endpoint": "http://127.0.0.1:12345",
+  "host": "127.0.0.1",
+  "pid": 1234,
+  "port": 12345
+}
+```
+
 ### Server mode example
 
 ```python
@@ -169,6 +188,15 @@ def test_server_mode_disabled() -> None:
     with mock_aws(server_mode=True, auto_endpoint=AutoEndpointMode.DISABLED) as ctx:
         client = boto3.client("s3", endpoint_url=ctx.server_endpoint)
         client.create_bucket(Bucket="server-mode-explicit")
+
+
+def test_server_mode_attach() -> None:
+    with mock_aws(server_mode=True) as server:
+        port = server.server_port
+        assert port is not None
+        # In another process, pass server_port to reuse the existing server.
+        with mock_aws(server_mode=True, server_port=port) as client:
+            assert client.server_endpoint == server.server_endpoint
 ```
 
 ### Pandas S3 in server mode
