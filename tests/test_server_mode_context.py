@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import json
 import os
 import pathlib
 import sys
 import time
 from urllib import error, parse, request
 
-import orjson
 import pytest
 from pytest_mock import MockerFixture
 
@@ -123,7 +123,7 @@ def test_server_mode_registry_written_and_cleaned(
         assert os.environ["AIOMOTO_SERVER_PORT"] == str(ctx.server_port)
         registry_path = ctx.server_registry_path
         assert registry_path is not None
-        payload = orjson.loads(pathlib.Path(registry_path).read_bytes())
+        payload = json.loads(pathlib.Path(registry_path).read_text(encoding="utf-8"))
         assert payload["endpoint"] == ctx.server_endpoint
         assert payload["host"] == ctx.server_host
         assert payload["port"] == ctx.server_port

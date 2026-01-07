@@ -20,7 +20,6 @@ keywords = [
 dependencies = [
     "aiobotocore>=2.24.1,<=2.25.1",
     "moto>=5.1.5,<=5.1.19",
-    "orjson>=3.11.5",
     "platformdirs>=4.0.0",
 ]
 classifiers = [

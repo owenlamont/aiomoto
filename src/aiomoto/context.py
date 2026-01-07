@@ -17,6 +17,7 @@ from contextlib import AbstractAsyncContextManager, AbstractContextManager, supp
 from functools import wraps
 import importlib.util
 import inspect
+import json
 import os
 from pathlib import Path
 import threading
@@ -27,7 +28,6 @@ import uuid
 from moto import settings
 from moto.core.decorator import mock_aws as moto_mock_aws
 from moto.core.models import MockAWS
-import orjson
 from platformdirs import user_cache_dir
 
 from aiomoto.exceptions import (
@@ -259,7 +259,7 @@ class _ServerModeState:
         token = uuid.uuid4().hex
         path = registry_dir / f"aiomoto-server-{token}.json"
         payload = {"endpoint": endpoint, "host": host, "port": port, "pid": os.getpid()}
-        path.write_bytes(orjson.dumps(payload, option=orjson.OPT_SORT_KEYS))
+        path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
         return str(path)
 
     def _remove_registry_file(self) -> None:
