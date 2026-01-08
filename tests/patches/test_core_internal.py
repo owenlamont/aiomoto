@@ -8,6 +8,7 @@ from botocore.compat import HTTPHeaders
 import pytest
 
 from aiomoto import mock_aws
+from aiomoto.exceptions import RealHTTPRequestBlockedError
 from aiomoto.patches.core import (
     _AioBytesIOAdapter,
     _materialize_request_body,
@@ -100,7 +101,7 @@ def test_core_patcher_idempotent_and_guard_blocks_send() -> None:
     patcher.start()  # idempotent branch
 
     guard = AioEndpoint._send  # type: ignore[attr-defined]
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RealHTTPRequestBlockedError):
         asyncio.run(guard(object(), None))
 
     patcher.stop()

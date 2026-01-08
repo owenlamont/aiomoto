@@ -17,15 +17,32 @@ from contextlib import AbstractAsyncContextManager, AbstractContextManager, supp
 from functools import wraps
 import importlib.util
 import inspect
+import json
 import os
+from pathlib import Path
 import threading
+import time
 from typing import Any, no_type_check, overload, ParamSpec, TypeVar
 from urllib import error, parse, request
+import uuid
 
 from moto import settings
 from moto.core.decorator import mock_aws as moto_mock_aws
 from moto.core.models import MockAWS
+from platformdirs import user_cache_dir
 
+from aiomoto.exceptions import (
+    AutoEndpointError,
+    InProcessModeError,
+    ModeConflictError,
+    ProxyModeError,
+    ServerModeConfigurationError,
+    ServerModeDependencyError,
+    ServerModeEndpointError,
+    ServerModeHealthcheckError,
+    ServerModePortError,
+    ServerModeRequiredError,
+)
 from aiomoto.patches.core import CorePatcher
 from aiomoto.patches.server_mode import AutoEndpointMode, ServerModePatcher
 
@@ -41,6 +58,10 @@ _ENV_KEYS = (
     "AWS_DEFAULT_REGION",
     "AWS_REGION",
 )
+_SERVER_REGISTRY_ENV = "AIOMOTO_SERVER_REGISTRY_DIR"
+_SERVER_PORT_ENV = "AIOMOTO_SERVER_PORT"
+_SERVER_ENV_KEYS = (*_ENV_KEYS, _SERVER_REGISTRY_ENV, _SERVER_PORT_ENV)
+_SERVER_REGISTRY_TTL_SECONDS = 24 * 60 * 60
 
 _DEFAULT_ENV = {
     "AWS_ACCESS_KEY_ID": "test",
@@ -51,8 +72,8 @@ _DEFAULT_ENV = {
 }
 
 
-def _snapshot_env() -> dict[str, str | None]:
-    return {key: os.environ.get(key) for key in _ENV_KEYS}
+def _snapshot_env(keys: tuple[str, ...] = _ENV_KEYS) -> dict[str, str | None]:
+    return {key: os.environ.get(key) for key in keys}
 
 
 def _apply_env_defaults() -> None:
@@ -72,18 +93,18 @@ def _restore_env(snapshot: dict[str, str | None]) -> None:
 def _healthcheck(endpoint: str) -> None:
     parsed = parse.urlparse(endpoint)
     if parsed.scheme not in {"http", "https"}:
-        raise RuntimeError(
+        raise ServerModeEndpointError(
             f"aiomoto server-mode healthcheck requires http(s) endpoint: {endpoint}"
         )
     health_url = f"{endpoint}/moto-api"
     try:
         with request.urlopen(health_url, timeout=2) as response:  # noqa: S310
             if response.status != 200:
-                raise RuntimeError(
+                raise ServerModeHealthcheckError(
                     f"aiomoto server-mode healthcheck failed: {health_url}"
                 )
     except (error.URLError, OSError) as exc:  # pragma: no cover - exercised via tests
-        raise RuntimeError(
+        raise ServerModeHealthcheckError(
             f"aiomoto server-mode healthcheck failed: {health_url}"
         ) from exc
 
@@ -93,7 +114,7 @@ def _ensure_server_dependencies() -> None:
         importlib.util.find_spec("flask") is None
         or importlib.util.find_spec("flask_cors") is None
     ):
-        raise RuntimeError(
+        raise ServerModeDependencyError(
             "aiomoto server_mode requires moto[server] dependencies (flask, "
             "flask-cors)."
         )
@@ -111,7 +132,7 @@ class _InProcessState:
     def enter(self) -> None:
         with self._lock:
             if _SERVER_STATE.active():
-                raise RuntimeError(
+                raise ModeConflictError(
                     "aiomoto server_mode cannot be combined with in-process mode."
                 )
             self._count += 1
@@ -130,24 +151,33 @@ class _ServerModeState:
         self._endpoint: str | None = None
         self._host: str | None = None
         self._port: int | None = None
+        self._registry_path: str | None = None
+        self._owns_server = False
         self._env_snapshot: dict[str, str | None] | None = None
 
     def active(self) -> bool:
         with self._lock:
             return self._count > 0
 
-    def start(self) -> tuple[str, int, str]:
+    def start(self, server_port: int | None) -> tuple[str, int, str, str | None]:
         with self._lock:
             if _INPROCESS_STATE.active():
-                raise RuntimeError(
+                raise ModeConflictError(
                     "aiomoto server_mode cannot be combined with in-process mode."
                 )
             if self._count == 0:
-                self._start_server()
+                self._start_server(server_port)
+            elif server_port is not None and server_port != self._port:
+                raise ServerModePortError(
+                    "aiomoto server_mode server_port changed while active."
+                )
             self._count += 1
             if self._host is None or self._port is None or self._endpoint is None:
-                raise RuntimeError("aiomoto server-mode failed to capture endpoint.")
-            return self._host, self._port, self._endpoint
+                raise ServerModeEndpointError(
+                    "aiomoto server-mode failed to capture endpoint."
+                )
+            registry_path = self._registry_path if server_port is None else None
+            return self._host, self._port, self._endpoint, registry_path
 
     def stop(self) -> None:
         with self._lock:
@@ -156,27 +186,54 @@ class _ServerModeState:
             self._count -= 1
             if self._count > 0:
                 return
-            if self._server is not None:
+            if self._server is not None and self._owns_server:
                 self._server.stop()
             self._server = None
             self._host = None
             self._port = None
             self._endpoint = None
+            if self._owns_server:
+                self._remove_registry_file()
+            self._registry_path = None
+            self._owns_server = False
             self._restore_env_snapshot()
 
-    def _start_server(self) -> None:
-        self._env_snapshot = _snapshot_env()
+    def _start_server(self, server_port: int | None) -> None:
+        self._env_snapshot = _snapshot_env(_SERVER_ENV_KEYS)
+        server: Any | None = None
+        registry_path: str | None = None
+        owns_server = False
         try:
-            _ensure_server_dependencies()
             _apply_env_defaults()
-            server, host, port, endpoint = self._create_server()
+            if server_port is None:
+                _ensure_server_dependencies()
+                server, host, port, endpoint = self._create_server()
+                registry_path = self._write_registry_file(host, port, endpoint)
+                registry_dir = str(Path(registry_path).parent)
+                os.environ[_SERVER_REGISTRY_ENV] = registry_dir
+                os.environ[_SERVER_PORT_ENV] = str(port)
+                owns_server = True
+            else:
+                if server_port <= 0 or server_port > 65535:
+                    raise ServerModePortError(
+                        "aiomoto server_mode server_port must be in 1..65535."
+                    )
+                host = "127.0.0.1"
+                port = server_port
+                endpoint = f"http://{host}:{port}"
+                _healthcheck(endpoint)
         except Exception:
+            if server is not None:
+                with suppress(Exception):
+                    server.stop()
             self._restore_env_snapshot()
             raise
         self._server = server
         self._host = host
         self._port = port
         self._endpoint = endpoint
+        self._registry_path = registry_path
+        self._owns_server = owns_server
 
     def _create_server(self) -> tuple[Any, str, int, str]:
         from moto.moto_server.threaded_moto_server import ThreadedMotoServer
@@ -194,6 +251,35 @@ class _ServerModeState:
                 with suppress(Exception):
                     server.stop()
         return server, host, port, endpoint
+
+    def _registry_dir(self) -> Path:
+        return Path(user_cache_dir("aiomoto"))
+
+    def _cleanup_stale_registry(self) -> None:
+        registry_dir = self._registry_dir()
+        if not registry_dir.exists():
+            return
+        cutoff = time.time() - _SERVER_REGISTRY_TTL_SECONDS
+        for path in registry_dir.glob("aiomoto-server-*.json"):
+            with suppress(OSError):
+                if path.stat().st_mtime < cutoff:
+                    path.unlink(missing_ok=True)
+
+    def _write_registry_file(self, host: str, port: int, endpoint: str) -> str:
+        registry_dir = self._registry_dir()
+        registry_dir.mkdir(parents=True, exist_ok=True)
+        self._cleanup_stale_registry()
+        token = uuid.uuid4().hex
+        path = registry_dir / f"aiomoto-server-{token}.json"
+        payload = {"endpoint": endpoint, "host": host, "port": port, "pid": os.getpid()}
+        path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+        return str(path)
+
+    def _remove_registry_file(self) -> None:
+        if self._registry_path is None:
+            return
+        with suppress(OSError):
+            Path(self._registry_path).unlink(missing_ok=True)
 
     def _restore_env_snapshot(self) -> None:
         if self._env_snapshot is not None:
@@ -214,7 +300,7 @@ def _normalize_auto_endpoint(
     else:
         mode = auto_endpoint
     if not server_mode and mode is not AutoEndpointMode.DISABLED:
-        raise RuntimeError("aiomoto auto_endpoint requires server_mode=True.")
+        raise AutoEndpointError("aiomoto auto_endpoint requires server_mode=True.")
     return mode
 
 
@@ -228,23 +314,32 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
         *,
         config: Any | None = None,
         server_mode: bool = False,
+        server_port: int | None = None,
         auto_endpoint: AutoEndpointMode | None = None,
     ) -> None:
         if settings.is_test_proxy_mode():
-            raise RuntimeError("aiomoto does not support Moto proxy mode.")
+            raise ProxyModeError("aiomoto does not support Moto proxy mode.")
         if settings.TEST_SERVER_MODE and not server_mode:
-            raise RuntimeError(
+            raise ServerModeRequiredError(
                 "aiomoto server_mode must be enabled when Moto server mode is active."
             )
         if server_mode and config is not None:
-            raise RuntimeError("aiomoto server_mode does not accept config overrides.")
+            raise ServerModeConfigurationError(
+                "aiomoto server_mode does not accept config overrides."
+            )
+        if server_port is not None and not server_mode:
+            raise ServerModeConfigurationError(
+                "aiomoto server_port requires server_mode=True."
+            )
         self._reset = reset
         self._remove_data = remove_data
         self._server_mode = server_mode
+        self._server_port_override = server_port
         self._auto_endpoint = _normalize_auto_endpoint(auto_endpoint, server_mode)
         self._server_host: str | None = None
         self._server_port: int | None = None
         self._server_endpoint: str | None = None
+        self._server_registry_path: str | None = None
         self._moto_context: MockAWS | None = None
         self._core: CorePatcher | None = None
         if self._server_mode:
@@ -276,6 +371,10 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
     def server_port(self) -> int | None:
         return self._server_port
 
+    @property
+    def server_registry_path(self) -> str | None:
+        return self._server_registry_path
+
     def start(self, reset: bool | None = None) -> None:
         if self._server_mode:
             self._start_server_mode()
@@ -285,12 +384,15 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
 
     def _start_server_mode(self) -> None:
         if self._depth == 0:
-            host, port, endpoint = _SERVER_STATE.start()
+            host, port, endpoint, registry_path = _SERVER_STATE.start(
+                self._server_port_override
+            )
             started = False
             try:
                 self._server_host = host
                 self._server_port = port
                 self._server_endpoint = endpoint
+                self._server_registry_path = registry_path
                 if self._auto_endpoint is not AutoEndpointMode.DISABLED:
                     _SERVER_PATCHER.start(endpoint, self._auto_endpoint)
                 started = True
@@ -300,6 +402,7 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
                     self._server_host = None
                     self._server_port = None
                     self._server_endpoint = None
+                    self._server_registry_path = None
         self._depth += 1
 
     def _start_in_process(self, reset: bool | None) -> None:
@@ -308,7 +411,7 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
             _INPROCESS_STATE.enter()
             if self._core is None or not isinstance(self._moto_context, MockAWS):
                 _INPROCESS_STATE.exit()
-                raise RuntimeError("aiomoto in-process mode not initialized.")
+                raise InProcessModeError("aiomoto in-process mode not initialized.")
             try:
                 self._core.start()
             except Exception:
@@ -316,12 +419,12 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
                 raise
         try:
             if not isinstance(self._moto_context, MockAWS):
-                raise RuntimeError("aiomoto in-process mode not initialized.")
+                raise InProcessModeError("aiomoto in-process mode not initialized.")
             self._moto_context.start(reset=reset if reset is not None else self._reset)
         except Exception as exc:
             if starting_new:
                 if self._core is None:
-                    raise RuntimeError(
+                    raise InProcessModeError(
                         "aiomoto in-process mode not initialized."
                     ) from exc
                 self._core.stop()
@@ -334,7 +437,7 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
             return
         if not self._server_mode:
             if not isinstance(self._moto_context, MockAWS):
-                raise RuntimeError("aiomoto in-process mode not initialized.")
+                raise InProcessModeError("aiomoto in-process mode not initialized.")
             self._moto_context.stop(
                 remove_data=remove_data
                 if remove_data is not None
@@ -349,9 +452,10 @@ class _MotoAsyncContext(AbstractAsyncContextManager, AbstractContextManager):
                 self._server_host = None
                 self._server_port = None
                 self._server_endpoint = None
+                self._server_registry_path = None
             else:
                 if self._core is None:
-                    raise RuntimeError("aiomoto in-process mode not initialized.")
+                    raise InProcessModeError("aiomoto in-process mode not initialized.")
                 self._core.stop()
                 _INPROCESS_STATE.exit()
 
@@ -430,6 +534,7 @@ def mock_aws_decorator(
     remove_data: bool = True,
     config: Any | None = None,
     server_mode: bool = False,
+    server_port: int | None = None,
     auto_endpoint: AutoEndpointMode | None = None,
 ) -> _MotoAsyncContext: ...
 
@@ -441,6 +546,7 @@ def mock_aws_decorator(
     remove_data: bool = True,
     config: Any | None = None,
     server_mode: bool = False,
+    server_port: int | None = None,
     auto_endpoint: AutoEndpointMode | None = None,
 ) -> Any:
     """Decorator factory mirroring Moto's ``mock_aws`` wrapper.
@@ -458,6 +564,7 @@ def mock_aws_decorator(
         remove_data=remove_data,
         config=config,
         server_mode=server_mode,
+        server_port=server_port,
         auto_endpoint=auto_endpoint,
     )
 
@@ -485,6 +592,7 @@ def mock_aws(
     remove_data: bool = True,
     config: Any | None = None,
     server_mode: bool = False,
+    server_port: int | None = None,
     auto_endpoint: AutoEndpointMode | None = None,
 ) -> _MotoAsyncContext: ...
 
@@ -496,6 +604,7 @@ def mock_aws(
     remove_data: bool = True,
     config: Any | None = None,
     server_mode: bool = False,
+    server_port: int | None = None,
     auto_endpoint: AutoEndpointMode | None = None,
 ) -> Any:
     """Factory/decorator mirroring Moto's ``mock_aws`` (config supported).
@@ -510,6 +619,7 @@ def mock_aws(
         remove_data=remove_data,
         config=config,
         server_mode=server_mode,
+        server_port=server_port,
         auto_endpoint=auto_endpoint,
     )
 

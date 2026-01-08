@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import os
+import pathlib
 import sys
 import time
 from urllib import error, parse, request
@@ -9,6 +11,7 @@ import pytest
 from pytest_mock import MockerFixture
 
 from aiomoto import AutoEndpointMode, mock_aws
+from aiomoto.exceptions import AutoEndpointError
 
 
 pytest.importorskip("flask")
@@ -62,7 +65,7 @@ def test_server_mode_nested_mismatch_rolls_back() -> None:
     with mock_aws(server_mode=True, auto_endpoint=AutoEndpointMode.FORCE) as outer:
         endpoint = outer.server_endpoint
         assert endpoint is not None
-        with pytest.raises(RuntimeError):
+        with pytest.raises(AutoEndpointError):
             mock_aws(
                 server_mode=True, auto_endpoint=AutoEndpointMode.IF_MISSING
             ).__enter__()
@@ -103,6 +106,46 @@ def test_server_mode_dependency_failure_restores_env(
     assert os.environ["AWS_ACCESS_KEY_ID"] == "orig"
     assert "AWS_SECRET_ACCESS_KEY" not in os.environ
     assert "AWS_DEFAULT_REGION" not in os.environ
+
+
+def test_server_mode_registry_written_and_cleaned(
+    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    registry_dir = tmp_path_factory.mktemp("aiomoto")
+    monkeypatch.setenv("AIOMOTO_SERVER_REGISTRY_DIR", "orig")
+    monkeypatch.setenv("AIOMOTO_SERVER_PORT", "42")
+    monkeypatch.setattr(
+        "aiomoto.context.user_cache_dir", lambda name: str(registry_dir)
+    )
+
+    with mock_aws(server_mode=True) as ctx:
+        assert os.environ["AIOMOTO_SERVER_REGISTRY_DIR"] == str(registry_dir)
+        assert os.environ["AIOMOTO_SERVER_PORT"] == str(ctx.server_port)
+        registry_path = ctx.server_registry_path
+        assert registry_path is not None
+        payload = json.loads(pathlib.Path(registry_path).read_text(encoding="utf-8"))
+        assert payload["endpoint"] == ctx.server_endpoint
+        assert payload["host"] == ctx.server_host
+        assert payload["port"] == ctx.server_port
+        assert payload["pid"] == os.getpid()
+
+    assert os.environ["AIOMOTO_SERVER_REGISTRY_DIR"] == "orig"
+    assert os.environ["AIOMOTO_SERVER_PORT"] == "42"
+    assert not pathlib.Path(registry_path).exists()
+
+
+def test_server_mode_attach_preserves_owner() -> None:
+    with mock_aws(server_mode=True) as owner:
+        port = owner.server_port
+        assert port is not None
+        endpoint = owner.server_endpoint
+        assert endpoint is not None
+        _assert_server_up(endpoint)
+        with mock_aws(server_mode=True, server_port=port) as attached:
+            assert attached.server_endpoint == endpoint
+            assert attached.server_registry_path is None
+        _assert_server_up(endpoint)
+    _assert_server_down(endpoint)
 
 
 def test_assert_server_up_rejects_invalid_scheme() -> None:

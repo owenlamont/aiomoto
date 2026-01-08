@@ -15,6 +15,8 @@ from botocore.awsrequest import AWSResponse
 from botocore.compat import HTTPHeaders
 from moto.core.models import botocore_stubber
 
+from aiomoto.exceptions import RealHTTPRequestBlockedError
+
 
 class _AioBytesIOAdapter:
     """Async wrapper around Moto's in-memory response body.
@@ -193,7 +195,7 @@ class CorePatcher:
 
         async def _guard_send(self: AioEndpoint, request: Any) -> Any:
             await asyncio.sleep(0)
-            raise RuntimeError(
+            raise RealHTTPRequestBlockedError(
                 "aiomoto: attempted real HTTP request while mock_aws is active"
             )
 
