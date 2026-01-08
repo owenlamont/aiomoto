@@ -21,6 +21,7 @@ import json
 import os
 from pathlib import Path
 import threading
+import time
 from typing import Any, no_type_check, overload, ParamSpec, TypeVar
 from urllib import error, parse, request
 import uuid
@@ -60,6 +61,7 @@ _ENV_KEYS = (
 _SERVER_REGISTRY_ENV = "AIOMOTO_SERVER_REGISTRY_DIR"
 _SERVER_PORT_ENV = "AIOMOTO_SERVER_PORT"
 _SERVER_ENV_KEYS = (*_ENV_KEYS, _SERVER_REGISTRY_ENV, _SERVER_PORT_ENV)
+_SERVER_REGISTRY_TTL_SECONDS = 24 * 60 * 60
 
 _DEFAULT_ENV = {
     "AWS_ACCESS_KEY_ID": "test",
@@ -253,9 +255,20 @@ class _ServerModeState:
     def _registry_dir(self) -> Path:
         return Path(user_cache_dir("aiomoto"))
 
+    def _cleanup_stale_registry(self) -> None:
+        registry_dir = self._registry_dir()
+        if not registry_dir.exists():
+            return
+        cutoff = time.time() - _SERVER_REGISTRY_TTL_SECONDS
+        for path in registry_dir.glob("aiomoto-server-*.json"):
+            with suppress(OSError):
+                if path.stat().st_mtime < cutoff:
+                    path.unlink(missing_ok=True)
+
     def _write_registry_file(self, host: str, port: int, endpoint: str) -> str:
         registry_dir = self._registry_dir()
         registry_dir.mkdir(parents=True, exist_ok=True)
+        self._cleanup_stale_registry()
         token = uuid.uuid4().hex
         path = registry_dir / f"aiomoto-server-{token}.json"
         payload = {"endpoint": endpoint, "host": host, "port": port, "pid": os.getpid()}

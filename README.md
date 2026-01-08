@@ -164,6 +164,9 @@ and contain payloads like:
 }
 ```
 
+Registry entries older than 24 hours are treated as stale and cleaned up when a
+new server is started.
+
 ### Server mode example
 
 ```python

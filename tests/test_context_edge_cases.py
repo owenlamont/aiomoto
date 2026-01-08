@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+import os
 from types import SimpleNamespace
 from urllib import error
 
+from freezegun import freeze_time
 import pytest
 from pytest_mock import MockerFixture
 
@@ -172,6 +175,42 @@ def test_server_state_start_cleanup_on_registry_failure(mocker: MockerFixture) -
         state.start(server_port=None)
 
     server.stop.assert_called_once_with()
+
+
+def test_cleanup_stale_registry_removes_old_files(
+    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    registry_dir = tmp_path_factory.mktemp("aiomoto")
+    monkeypatch.setattr(
+        "aiomoto.context.user_cache_dir", lambda name: str(registry_dir)
+    )
+    state = _ServerModeState()
+
+    now = 1_700_000_000
+    old_path = registry_dir / "aiomoto-server-old.json"
+    old_path.write_text("{}", encoding="utf-8")
+    os.utime(old_path, (now - 100_000, now - 100_000))
+
+    fresh_path = registry_dir / "aiomoto-server-fresh.json"
+    fresh_path.write_text("{}", encoding="utf-8")
+    os.utime(fresh_path, (now, now))
+
+    with freeze_time(datetime.fromtimestamp(now, tz=timezone.utc)):
+        state._cleanup_stale_registry()
+
+    assert not old_path.exists()
+    assert fresh_path.exists()
+
+
+def test_cleanup_stale_registry_noop_when_missing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    registry_dir = tmp_path_factory.mktemp("aiomoto") / "missing"
+    monkeypatch.setattr(
+        "aiomoto.context.user_cache_dir", lambda name: str(registry_dir)
+    )
+    state = _ServerModeState()
+    state._cleanup_stale_registry()
 
 
 def test_normalize_auto_endpoint_rejects_without_server_mode() -> None:
