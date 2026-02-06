@@ -14,13 +14,13 @@ jobs:
       UV_PYTHON: 3.14
     steps:
       - name: Checkout repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       - name: Set up Python
-        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: "3.14"
       - name: Install uv
-        uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b
+        uses: astral-sh/setup-uv@803947b9bd8e9f986429fa0c5a41c367cd732b41
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
@@ -53,7 +53,7 @@ jobs:
           private-key: ${{ secrets.AUTH_APP_PRIVATE_KEY }}
       - name: Create PR with updated deps
         if: steps.check_diff.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0
         with:
           token: ${{ steps.generate-token.outputs.token }}
           commit-message: "chore: upgrade dependencies and repin aioboto"
