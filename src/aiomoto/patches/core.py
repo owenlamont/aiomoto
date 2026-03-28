@@ -17,6 +17,7 @@ from moto.core.models import botocore_stubber
 
 from aiomoto.exceptions import RealHTTPRequestBlockedError
 
+
 _AIO_ENDPOINT_SEND_ATTR = "_send"
 _AIO_SESSION_CREATE_CLIENT_ATTR = "_create_client"
 _AIO_HIERARCHICAL_EMITTER_EMIT_ATTR = "_emit"
@@ -215,9 +216,7 @@ class CorePatcher:
         if self._original_create_client is not None:
             return
 
-        original_create_client = getattr(
-            AioSession, _AIO_SESSION_CREATE_CLIENT_ATTR
-        )
+        original_create_client = getattr(AioSession, _AIO_SESSION_CREATE_CLIENT_ATTR)
         self._original_create_client = original_create_client
 
         async def _create_client(

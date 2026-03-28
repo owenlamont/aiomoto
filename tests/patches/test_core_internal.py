@@ -10,6 +10,7 @@ import pytest
 from aiomoto import mock_aws
 from aiomoto.exceptions import RealHTTPRequestBlockedError
 from aiomoto.patches.core import (
+    _AIO_ENDPOINT_SEND_ATTR,
     _AioBytesIOAdapter,
     _materialize_request_body,
     _wrap_stubber_handler,
@@ -100,7 +101,7 @@ def test_core_patcher_idempotent_and_guard_blocks_send() -> None:
     patcher.start()
     patcher.start()  # idempotent branch
 
-    guard = getattr(AioEndpoint, "_send")
+    guard = getattr(AioEndpoint, _AIO_ENDPOINT_SEND_ATTR)
     with pytest.raises(RealHTTPRequestBlockedError):
         asyncio.run(guard(object(), None))
 
