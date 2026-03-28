@@ -18,6 +18,11 @@ from moto.core.models import botocore_stubber
 from aiomoto.exceptions import RealHTTPRequestBlockedError
 
 
+_AIO_ENDPOINT_SEND_ATTR = "_send"
+_AIO_SESSION_CREATE_CLIENT_ATTR = "_create_client"
+_AIO_HIERARCHICAL_EMITTER_EMIT_ATTR = "_emit"
+
+
 class _AioBytesIOAdapter:
     """Async wrapper around Moto's in-memory response body.
 
@@ -191,7 +196,7 @@ class CorePatcher:
         if self._original_send is not None:
             return
 
-        self._original_send = AioEndpoint._send  # type: ignore[attr-defined]
+        self._original_send = getattr(AioEndpoint, _AIO_ENDPOINT_SEND_ATTR)
 
         async def _guard_send(self: AioEndpoint, request: Any) -> Any:
             await asyncio.sleep(0)
@@ -199,11 +204,11 @@ class CorePatcher:
                 "aiomoto: attempted real HTTP request while mock_aws is active"
             )
 
-        AioEndpoint._send = _guard_send  # type: ignore[attr-defined]
+        setattr(AioEndpoint, _AIO_ENDPOINT_SEND_ATTR, _guard_send)
 
     def _restore_send(self) -> None:
         if self._original_send is not None:
-            AioEndpoint._send = self._original_send  # type: ignore[attr-defined]
+            setattr(AioEndpoint, _AIO_ENDPOINT_SEND_ATTR, self._original_send)
             self._original_send = None
 
     # client creation ----------------------------------------------------------
@@ -211,7 +216,7 @@ class CorePatcher:
         if self._original_create_client is not None:
             return
 
-        original_create_client = AioSession._create_client  # type: ignore[attr-defined]
+        original_create_client = getattr(AioSession, _AIO_SESSION_CREATE_CLIENT_ATTR)
         self._original_create_client = original_create_client
 
         async def _create_client(
@@ -227,11 +232,15 @@ class CorePatcher:
             )
             return client
 
-        AioSession._create_client = _create_client  # type: ignore[attr-defined]
+        setattr(AioSession, _AIO_SESSION_CREATE_CLIENT_ATTR, _create_client)
 
     def _restore_session_create(self) -> None:
         if self._original_create_client is not None:
-            AioSession._create_client = self._original_create_client  # type: ignore[attr-defined]
+            setattr(
+                AioSession,
+                _AIO_SESSION_CREATE_CLIENT_ATTR,
+                self._original_create_client,
+            )
             self._original_create_client = None
 
     # emitter bridging ---------------------------------------------------------
@@ -243,7 +252,8 @@ class CorePatcher:
         def _emit_wrapped(
             self: AioHierarchicalEmitter, event_name: str, **kwargs: Any
         ) -> Any:
-            coro = self._emit(event_name, kwargs, stop_on_response=False)  # type: ignore[attr-defined]
+            emit_impl = getattr(self, _AIO_HIERARCHICAL_EMITTER_EMIT_ATTR)
+            coro = emit_impl(event_name, kwargs, stop_on_response=False)
             try:
                 loop = asyncio.get_running_loop()
             except RuntimeError:  # pragma: no cover - fallback
