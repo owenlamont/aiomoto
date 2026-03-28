@@ -22,6 +22,7 @@ from aiomoto.patches.server_mode import (
     _pandas_modules,
     _polars_fsspec_has_endpoint,
     _polars_modules,
+    _polars_query_opt_flags_eager,
     _polars_storage_options_has_endpoint,
     _require_server_settings,
     _should_inject,
@@ -366,6 +367,30 @@ def test_wrap_polars_write_ndjson_noop_when_self_missing() -> None:
     result = wrapped(None, "s3://bucket/key")
     assert result == "ok"
     assert called["file"] == "s3://bucket/key"
+
+
+def test_polars_query_opt_flags_eager_returns_none_when_module_missing(
+    mocker: MockerFixture,
+) -> None:
+    mocker.patch(
+        "aiomoto.patches.server_mode.importlib.import_module",
+        side_effect=ModuleNotFoundError,
+    )
+    assert _polars_query_opt_flags_eager() is None
+
+
+def test_polars_query_opt_flags_eager_returns_eager_value(
+    mocker: MockerFixture,
+) -> None:
+    eager_value = object()
+    query_opt_flags = mocker.Mock()
+    query_opt_flags._eager.return_value = eager_value
+    opt_flags_module = mocker.Mock(QueryOptFlags=query_opt_flags)
+    mocker.patch(
+        "aiomoto.patches.server_mode.importlib.import_module",
+        return_value=opt_flags_module,
+    )
+    assert _polars_query_opt_flags_eager() is eager_value
 
 
 def test_apply_client_defaults_skips_session_token_when_missing(

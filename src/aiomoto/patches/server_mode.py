@@ -294,17 +294,29 @@ def _wrap_polars_write_ndjson(
         self_obj = bound.arguments.get("self")
         if self_obj is None:
             return original(*bound.args, **bound.kwargs)
-        from polars.lazyframe.opt_flags import QueryOptFlags
-
-        self_obj.lazy().sink_ndjson(
-            file,
-            storage_options=storage_options,
-            optimizations=QueryOptFlags._eager(),
-            engine="in-memory",
-        )
+        sink_kwargs: dict[str, Any] = {
+            "storage_options": storage_options,
+            "engine": "in-memory",
+        }
+        optimizations = _polars_query_opt_flags_eager()
+        if optimizations is not None:
+            sink_kwargs["optimizations"] = optimizations
+        self_obj.lazy().sink_ndjson(file, **sink_kwargs)
         return None
 
     return _write_ndjson
+
+
+def _polars_query_opt_flags_eager() -> object | None:
+    try:
+        opt_flags = importlib.import_module("polars.lazyframe.opt_flags")
+    except ModuleNotFoundError:
+        return None
+    query_opt_flags = getattr(opt_flags, "QueryOptFlags", None)
+    eager = getattr(query_opt_flags, "_eager", None)
+    if not callable(eager):
+        return None
+    return eager()
 
 
 def _wrap_pandas_get_filepath(
