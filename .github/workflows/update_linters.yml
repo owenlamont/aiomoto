@@ -7,12 +7,15 @@ on:
 jobs:
   refresh-pre-commit-config:
     runs-on: ubuntu-latest
+    environment: automation
     permissions:
       contents: write
       pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
       - name: Install uv
         uses: astral-sh/setup-uv@eac588ad8def6316056a12d4907a9d4d84ff7a3b
       - name: Install pre-commit globally

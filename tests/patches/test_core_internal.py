@@ -100,7 +100,7 @@ def test_core_patcher_idempotent_and_guard_blocks_send() -> None:
     patcher.start()
     patcher.start()  # idempotent branch
 
-    guard = AioEndpoint._send  # type: ignore[attr-defined]
+    guard = getattr(AioEndpoint, "_send")
     with pytest.raises(RealHTTPRequestBlockedError):
         asyncio.run(guard(object(), None))
 
