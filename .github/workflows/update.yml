@@ -1,11 +1,11 @@
-name: Update Dependencies
+name: Update Dependencies and Linters
 on:
   schedule:
     - cron: '30 8 * * 5'  # Friday 18:00 UTC+9:30
   workflow_dispatch:
 
 jobs:
-  refresh-uv-lock:
+  refresh-dependencies-and-linters:
     runs-on: ubuntu-latest
     environment: automation
     permissions:
@@ -29,20 +29,20 @@ jobs:
           cache-dependency-glob: "uv.lock"
       - name: Loosen bounds (workflow only)
         run: uv run scripts/manage_dependency_bounds.py loosen-bounds
-
-      - name: Upgrade dependencies with relaxed bounds
+      - name: Upgrade dependencies
         run: uv sync --upgrade --all-extras
-
       - name: Restore upper bounds
         run: uv run scripts/manage_dependency_bounds.py add-bounds
-
       - name: Re-lock with pinned versions
         run: uv lock
-
-      - name: Check for changes in pyproject/uv.lock
+      - name: Install prek
+        run: uv tool install prek
+      - name: Run prek autoupdate
+        run: prek autoupdate
+      - name: Check for changes in pyproject/uv.lock or .pre-commit-config.yaml
         id: check_diff
         run: |
-          if git diff --quiet uv.lock pyproject.toml; then
+          if git diff --quiet uv.lock pyproject.toml .pre-commit-config.yaml; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
@@ -54,15 +54,17 @@ jobs:
         with:
           app-id: ${{ secrets.AUTH_APP_CLIENT_ID }}
           private-key: ${{ secrets.AUTH_APP_PRIVATE_KEY }}
-      - name: Create PR with updated deps
+      - name: Create PR with updated deps and linters
         if: steps.check_diff.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0
         with:
           token: ${{ steps.generate-token.outputs.token }}
-          commit-message: "chore: upgrade dependencies and repin aioboto"
-          title: "chore: upgrade dependencies and repin aioboto"
+          commit-message: "chore: refresh dependencies and linters"
+          title: "chore: refresh dependencies and linters"
           body: |
-            This PR temporarily loosens upper bounds to explore newer releases, upgrades via `uv sync --upgrade --all-extras`, restores bounds, and refreshes `uv.lock`.
-          branch: bot/uv-lock-refresh
+            This PR upgrades dependencies via `uv sync --upgrade --all-extras`,
+            refreshes `uv.lock`, and updates `.pre-commit-config.yaml` by running
+            `prek autoupdate`.
+          branch: bot/update-deps-and-linters
           author: GitHub Actions <actions@github.com>
           delete-branch: true
