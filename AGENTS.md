@@ -36,11 +36,11 @@ boto3. The focus is a clean, reusable library API rather than a CLI entry point.
 - **ty.toml** – ty type checker configuration.
 - **pyproject.toml** – Package configuration (distribution metadata, optional
   extras, build backend, and dependency groups).
-- **.pre-commit-config.yaml** – Pre-commit linters and configuration.
+- **prek.toml** – prek linters and configuration.
 - **pytest.ini** – Pytest configuration.
 - **ruff.toml** – Code style and linter configuration.
 - **.rumdl.toml** – Markdown linter configuration.
-- **.yamllint** – YAML linter configuration.
+- **.ryl.toml** – YAML linter configuration.
 - **typos.toml** – Typos configuration.
 
 ## Code Style

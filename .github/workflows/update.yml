@@ -37,12 +37,12 @@ jobs:
         run: uv lock
       - name: Install prek
         run: uv tool install prek
-      - name: Run prek autoupdate
-        run: prek autoupdate
-      - name: Check for changes in pyproject/uv.lock or .pre-commit-config.yaml
+      - name: Run prek autoupdate --cooldown-days 7
+        run: prek autoupdate --cooldown-days 7
+      - name: Check for changes
         id: check_diff
         run: |
-          if git diff --quiet uv.lock pyproject.toml .pre-commit-config.yaml; then
+          if git diff --quiet; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
@@ -63,8 +63,8 @@ jobs:
           title: "chore: refresh dependencies and linters"
           body: |
             This PR upgrades dependencies via `uv sync --upgrade --all-extras`,
-            refreshes `uv.lock`, and updates `.pre-commit-config.yaml` by running
-            `prek autoupdate`.
+            refreshes `uv.lock`, updates `prek.toml` by running
+            `prek autoupdate --cooldown-days 7`.
           branch: bot/update-deps-and-linters
           author: GitHub Actions <actions@github.com>
           delete-branch: true
