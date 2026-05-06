@@ -99,6 +99,13 @@ boto3. The focus is a clean, reusable library API rather than a CLI entry point.
 - Future integration tests may rely on AWS emulators such as DynamoDB Local on
   `http://localhost:8000`. Request elevated permissions when needed so those
   endpoints remain reachable.
+- The Polars and pandas server-mode shims skip on Python 3.14 (polars does not yet
+  declare 3.14 support — <https://github.com/pola-rs/polars/issues/25035> — and the
+  pandas pin tracks <https://github.com/pandas-dev/pandas/issues/62261>). When
+  touching `src/aiomoto/patches/server_mode.py` or the corresponding tests, run the
+  shim suites under 3.13 explicitly:
+  `uv run --python 3.13 pytest tests/test_polars_server_mode.py tests/test_server_mode_internal.py -n logical --color=no`.
+  The default `uv run pytest` will silently skip these modules on 3.14.
 - Tests treat warnings as errors. Fix warnings raised by this repo. Third-party
   warnings can be explicitly ignored when necessary.
 - Only use test functions (no classes). Put setup into fixtures or parameters so the
