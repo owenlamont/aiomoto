@@ -104,7 +104,7 @@ boto3. The focus is a clean, reusable library API rather than a CLI entry point.
   pandas pin tracks <https://github.com/pandas-dev/pandas/issues/62261>). When
   touching `src/aiomoto/patches/server_mode.py` or the corresponding tests, run the
   shim suites under 3.13 explicitly:
-  `uv run --python 3.13 pytest tests/test_polars_server_mode.py tests/test_server_mode_internal.py -n logical --color=no`.
+  `uv run --python 3.13 pytest -n logical`.
   The default `uv run pytest` will silently skip these modules on 3.14.
 - Tests treat warnings as errors. Fix warnings raised by this repo. Third-party
   warnings can be explicitly ignored when necessary.
