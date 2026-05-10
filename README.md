@@ -135,6 +135,15 @@ HTTP calls; any attempts fall back to Moto and will raise if they escape the
 stubber. Avoid mixing raw Moto decorators with aiomoto contexts in the same test to
 keep state aligned.
 
+In-process mode inherits Moto's URL matching behavior. Ambient endpoint
+configuration such as `AWS_ENDPOINT_URL=http://localhost:4566` can make boto3 or
+aiobotocore clients target that endpoint instead of a normal AWS service URL, which
+means Moto will not intercept the request. If your environment sets
+`AWS_ENDPOINT_URL`, either unset it for in-process tests or set
+`AWS_IGNORE_CONFIGURED_ENDPOINT_URLS=true` so botocore ignores configured endpoint
+URLs. If you intentionally need clients to use a local HTTP endpoint, prefer
+`mock_aws(server_mode=True)`.
+
 > aiomoto defaults to Moto’s **in-process** mode. Use
 > `mock_aws(server_mode=True)` to run a local Moto server without in-process
 > patches. In server mode, set `auto_endpoint` to control endpoint injection:
