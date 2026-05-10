@@ -17,6 +17,8 @@ boto3. The focus is a clean, reusable library API rather than a CLI entry point.
   time so the commands can access the full workspace and any required local
   services. In unrestricted environments just make sure the resources are
   reachable.
+- Never commit or push without explicit approval for that specific commit/push action.
+  Approval is case-by-case and does not carry forward from earlier requests.
 - When running ad-hoc Python (inspecting objects, small scripts, etc.), use
   `uv run python` so the project venv and pinned dependencies are active.
 - Update documentation whenever behaviour or feature changes are introduced.
@@ -59,7 +61,7 @@ boto3. The focus is a clean, reusable library API rather than a CLI entry point.
 - Do not create sub-packages inside `tests`. Test module names must be unique across
   the repo (other than `__init__.py` and `conftest.py`).
 - Use the most modern Python idioms allowed by the minimum supported version
-  (currently Python 3.10).
+  (currently Python 3.11).
 - Comments should be kept to an absolute minimum, try to achieve code readability
   through meaningful class, function, and variable names. Public functions should have
   Google-style docstrings; parameters only need to be documented if the name and type

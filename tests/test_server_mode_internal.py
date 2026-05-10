@@ -379,6 +379,17 @@ def test_polars_query_opt_flags_eager_returns_none_when_module_missing(
     assert _polars_query_opt_flags_eager() is None
 
 
+def test_polars_query_opt_flags_eager_returns_none_when_eager_missing(
+    mocker: MockerFixture,
+) -> None:
+    opt_flags_module = mocker.Mock(QueryOptFlags=object())
+    mocker.patch(
+        "aiomoto.patches.server_mode.importlib.import_module",
+        return_value=opt_flags_module,
+    )
+    assert _polars_query_opt_flags_eager() is None
+
+
 def test_polars_query_opt_flags_eager_returns_eager_value(
     mocker: MockerFixture,
 ) -> None:
