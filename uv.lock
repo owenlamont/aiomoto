@@ -580,6 +580,18 @@ dev = [
     { name = "types-aiobotocore" },
     { name = "types-aiobotocore-full" },
 ]
+ft-test = [
+    { name = "aioboto3" },
+    { name = "coverage" },
+    { name = "freezegun" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "pytest-mock" },
+    { name = "pytest-randomly" },
+    { name = "pytest-xdist", extra = ["psutil"] },
+    { name = "s3fs" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -735,6 +747,18 @@ dev = [
     { name = "types-aioboto3", extras = ["full"], specifier = ">=15.3.0" },
     { name = "types-aiobotocore", specifier = ">=2.24.1" },
     { name = "types-aiobotocore-full", specifier = ">=2.24.1" },
+]
+ft-test = [
+    { name = "aioboto3", specifier = ">=15.3.0" },
+    { name = "coverage", specifier = ">=7.6.9" },
+    { name = "freezegun", specifier = ">=1.5.1" },
+    { name = "pytest", specifier = ">=8.3.4" },
+    { name = "pytest-asyncio", specifier = ">=0.25.2" },
+    { name = "pytest-cov", specifier = ">=6.0.0" },
+    { name = "pytest-mock", specifier = ">=3.14.0" },
+    { name = "pytest-randomly", specifier = ">=4.0.1" },
+    { name = "pytest-xdist", extras = ["psutil"], specifier = ">=3.8.0" },
+    { name = "s3fs", specifier = ">=2024.6.0" },
 ]
 
 [[package]]

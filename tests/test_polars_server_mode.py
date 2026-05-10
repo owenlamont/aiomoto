@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+import sys
+
 import boto3
 import pytest
 
 from aiomoto import mock_aws
 
+
+if hasattr(sys, "_is_gil_enabled") and not sys._is_gil_enabled():  # pragma: no cover
+    pytest.skip(
+        "Polars server-mode integration is not validated on free-threaded builds",
+        allow_module_level=True,
+    )
 
 pytest.importorskip("flask")
 pytest.importorskip("flask_cors")
