@@ -224,7 +224,7 @@ def test_pandas_server_mode_csv() -> None:
 ```
 
 Requires pandas + fsspec + s3fs for S3 access (pyarrow for parquet). You can
-install the pinned pandas extra via `aiomoto[pandas]`.
+install the pandas extra via `aiomoto[pandas]`.
 
 ### s3fs example
 
@@ -290,3 +290,8 @@ The living roadmap sits in the wiki [Roadmap](https://github.com/owenlamont/aiom
   fsspec/s3fs when those dependencies are installed.
 - Polars S3 I/O is patched in server mode when polars is installed; aiomoto
   injects `storage_options` for `s3://` paths following the `auto_endpoint` mode.
+- Free-threaded CPython 3.14t support covers aiomoto's core in-process mocking.
+  Pandas and Polars server-mode integrations are validated on regular CPython
+  builds only; their dependency stacks are not yet reliable on free-threaded
+  interpreters, and Windows 3.14t also lacks compatible pywin32 wheels for
+  Moto's server dependency chain.

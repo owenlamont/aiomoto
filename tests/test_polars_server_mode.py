@@ -8,14 +8,14 @@ import pytest
 from aiomoto import mock_aws
 
 
-pytest.importorskip("flask")
-pytest.importorskip("flask_cors")
-if sys.version_info >= (3, 14):  # pragma: no cover
-    pytest.skip(  # pragma: no cover
-        "Polars does not declare Python 3.14 support yet; "
-        "https://github.com/pola-rs/polars/issues/25035",
+if hasattr(sys, "_is_gil_enabled") and not sys._is_gil_enabled():  # pragma: no cover
+    pytest.skip(
+        "Polars server-mode integration is not validated on free-threaded builds",
         allow_module_level=True,
     )
+
+pytest.importorskip("flask")
+pytest.importorskip("flask_cors")
 pl = pytest.importorskip("polars")
 assert_frame_equal = pytest.importorskip("polars.testing").assert_frame_equal
 

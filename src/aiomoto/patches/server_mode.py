@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from enum import Enum
+from enum import StrEnum
 import importlib
 import importlib.util
 import inspect
@@ -18,7 +18,7 @@ from botocore.session import Session as BotocoreSession
 from aiomoto.exceptions import AutoEndpointError
 
 
-class AutoEndpointMode(str, Enum):
+class AutoEndpointMode(StrEnum):
     FORCE = "force"
     IF_MISSING = "if_missing"
     DISABLED = "disabled"
