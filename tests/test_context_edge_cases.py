@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 import os
 from types import SimpleNamespace
 from urllib import error
@@ -195,7 +195,7 @@ def test_cleanup_stale_registry_removes_old_files(
     fresh_path.write_text("{}", encoding="utf-8")
     os.utime(fresh_path, (now, now))
 
-    with freeze_time(datetime.fromtimestamp(now, tz=timezone.utc)):
+    with freeze_time(datetime.fromtimestamp(now, tz=UTC)):
         state._cleanup_stale_registry()
 
     assert not old_path.exists()

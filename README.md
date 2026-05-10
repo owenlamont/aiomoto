@@ -224,7 +224,7 @@ def test_pandas_server_mode_csv() -> None:
 ```
 
 Requires pandas + fsspec + s3fs for S3 access (pyarrow for parquet). You can
-install the pinned pandas extra via `aiomoto[pandas]`.
+install the pandas extra via `aiomoto[pandas]`.
 
 ### s3fs example
 
