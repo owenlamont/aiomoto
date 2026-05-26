@@ -5,8 +5,8 @@ Guidance on how to navigate and modify this codebase.
 ## What This Library Does
 
 aiomoto is an installable Python package that brings Moto-style AWS service mocks to
-async stacks such as aioboto3 or aiobotocore while staying compatible with classic
-boto3. The focus is a clean, reusable library API rather than a CLI entry point.
+async stacks built on aiobotocore while staying compatible with classic boto3. The
+focus is a clean, reusable library API rather than a CLI entry point.
 
 ## Code Change Requirements
 

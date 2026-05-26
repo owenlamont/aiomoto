@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from uuid import uuid4
 
-import aioboto3
+from aiobotocore.session import AioSession
 import pytest
 
 from aiomoto import mock_aws
@@ -12,15 +12,11 @@ from aiomoto import mock_aws
 REGION = "us-east-1"
 
 
-def _session() -> aioboto3.Session:
-    return aioboto3.Session()
-
-
 @pytest.mark.asyncio
 async def test_create_queue_and_attributes_async() -> None:
     q_name = f"q-{uuid4().hex[:8]}"
     with mock_aws():
-        async with _session().client("sqs", region_name=REGION) as sqs:
+        async with AioSession().create_client("sqs", region_name=REGION) as sqs:
             queue_url = (await sqs.create_queue(QueueName=q_name, Attributes={}))[
                 "QueueUrl"
             ]
@@ -41,24 +37,29 @@ async def test_create_queue_and_attributes_async() -> None:
 async def test_send_receive_delete_message_async() -> None:
     q_name = f"q-{uuid4().hex[:8]}"
     with mock_aws():
-        async with _session().resource("sqs", region_name=REGION) as sqs:
-            queue = await sqs.create_queue(QueueName=q_name)
-            send_resp = await queue.send_message(MessageBody="hello", DelaySeconds=0)
-
-            messages = await queue.receive_messages(
-                MaxNumberOfMessages=1, WaitTimeSeconds=0
+        async with AioSession().create_client("sqs", region_name=REGION) as sqs:
+            queue_url = (await sqs.create_queue(QueueName=q_name))["QueueUrl"]
+            send_resp = await sqs.send_message(
+                QueueUrl=queue_url, MessageBody="hello", DelaySeconds=0
             )
+
+            received = await sqs.receive_message(
+                QueueUrl=queue_url, MaxNumberOfMessages=1, WaitTimeSeconds=0
+            )
+            messages = received.get("Messages", [])
             assert len(messages) == 1
             message = messages[0]
-            assert await message.body == "hello"
-            assert send_resp["MessageId"] == await message.message_id
+            assert message["Body"] == "hello"
+            assert send_resp["MessageId"] == message["MessageId"]
 
-            await message.delete()
-            remaining = await queue.receive_messages(
-                MaxNumberOfMessages=1, WaitTimeSeconds=0
+            await sqs.delete_message(
+                QueueUrl=queue_url, ReceiptHandle=message["ReceiptHandle"]
+            )
+            remaining = await sqs.receive_message(
+                QueueUrl=queue_url, MaxNumberOfMessages=1, WaitTimeSeconds=0
             )
 
-    assert remaining == []
+    assert remaining.get("Messages", []) == []
 
 
 @pytest.mark.asyncio
@@ -70,7 +71,7 @@ async def test_create_queue_with_tags_and_policy_async() -> None:
         "Statement": [{"Effect": "Allow", "Principal": "*", "Action": "*"}],
     }
     with mock_aws():
-        async with _session().client("sqs", region_name=REGION) as sqs:
+        async with AioSession().create_client("sqs", region_name=REGION) as sqs:
             queue_url = (
                 await sqs.create_queue(
                     QueueName=q_name,

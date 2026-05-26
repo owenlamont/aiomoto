@@ -41,20 +41,6 @@ def test_server_mode_auto_endpoint_if_missing_preserves_endpoint() -> None:
         assert client.meta.endpoint_url == "http://example.com"
 
 
-@pytest.mark.asyncio
-async def test_server_mode_auto_endpoint_aioboto3() -> None:
-    aioboto3 = pytest.importorskip("aioboto3")
-    with mock_aws(server_mode=True) as ctx:
-        endpoint = ctx.server_endpoint
-        assert endpoint is not None
-        session = aioboto3.Session()
-        async with session.client("s3") as client:
-            assert client.meta.endpoint_url == endpoint
-            await client.create_bucket(Bucket="aiomoto-aioboto3")
-            response = await client.list_buckets()
-            assert any(b["Name"] == "aiomoto-aioboto3" for b in response["Buckets"])
-
-
 def test_server_mode_auto_endpoint_s3fs() -> None:
     s3fs = pytest.importorskip("s3fs")
     with mock_aws(server_mode=True) as ctx:

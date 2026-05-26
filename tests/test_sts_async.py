@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 import json
 
-import aioboto3
+from aiobotocore.session import AioSession
 from botocore.exceptions import ClientError
 from freezegun import freeze_time
 from moto.sts.responses import MAX_FEDERATION_TOKEN_POLICY_LENGTH, MAX_ROLE_NAME_LENGTH
@@ -21,14 +21,10 @@ REGION_PARTITIONS = [
 ]
 
 
-def _session() -> aioboto3.Session:
-    return aioboto3.Session()
-
-
 @pytest.mark.asyncio
 async def test_get_session_token_async() -> None:
     with freeze_time("2012-01-01 12:00:00", real_asyncio=True), mock_aws():
-        async with _session().client("sts", region_name="us-east-1") as sts:
+        async with AioSession().create_client("sts", region_name="us-east-1") as sts:
             creds = (await sts.get_session_token(DurationSeconds=903))["Credentials"]
 
     assert isinstance(creds["Expiration"], datetime)
@@ -49,7 +45,7 @@ async def test_get_session_token_async() -> None:
 async def test_get_federation_token_async() -> None:
     federated_user_name = "sts-user"
     with freeze_time("2012-01-01 12:00:00", real_asyncio=True), mock_aws():
-        async with _session().client("sts", region_name="us-east-1") as sts:
+        async with AioSession().create_client("sts", region_name="us-east-1") as sts:
             fed_token = await sts.get_federation_token(
                 DurationSeconds=903, Name=federated_user_name
             )
@@ -80,7 +76,7 @@ async def test_get_federation_token_async() -> None:
 @pytest.mark.parametrize(("region", "partition"), REGION_PARTITIONS)
 async def test_assume_role_async(region: str, partition: str) -> None:
     with freeze_time("2012-01-01 12:00:00", real_asyncio=True), mock_aws():
-        async with _session().client("iam", region_name=region) as iam:
+        async with AioSession().create_client("iam", region_name=region) as iam:
             trust_policy_document = {
                 "Version": "2012-10-17",
                 "Statement": {
@@ -98,7 +94,7 @@ async def test_assume_role_async(region: str, partition: str) -> None:
             role_arn = role["Arn"]
             role_id = role["RoleId"]
 
-        async with _session().client("sts", region_name=region) as sts:
+        async with AioSession().create_client("sts", region_name=region) as sts:
             assume_role_response = await sts.assume_role(
                 RoleArn=role_arn,
                 RoleSessionName="session-name",
@@ -137,7 +133,7 @@ async def test_assume_role_async(region: str, partition: str) -> None:
 @pytest.mark.asyncio
 async def test_assume_role_with_too_long_role_session_name_async() -> None:
     with mock_aws():
-        async with _session().client("iam", region_name="us-east-1") as iam:
+        async with AioSession().create_client("iam", region_name="us-east-1") as iam:
             trust_policy_document = {
                 "Version": "2012-10-17",
                 "Statement": {
@@ -153,7 +149,7 @@ async def test_assume_role_with_too_long_role_session_name_async() -> None:
                 )
             )["Role"]["Arn"]
 
-        async with _session().client("sts", region_name="us-east-1") as sts:
+        async with AioSession().create_client("sts", region_name="us-east-1") as sts:
             session_name = "s" * 65
             with pytest.raises(ClientError) as ex:  # pragma: no branch
                 await sts.assume_role(
@@ -173,7 +169,7 @@ async def test_get_caller_identity_with_default_credentials_async(
     region: str, partition: str
 ) -> None:
     with mock_aws():
-        async with _session().client("sts", region_name=region) as sts:
+        async with AioSession().create_client("sts", region_name=region) as sts:
             identity = await sts.get_caller_identity()
 
     assert identity["Arn"] == f"arn:{partition}:sts::{ACCOUNT_ID}:user/moto"
@@ -189,11 +185,11 @@ async def test_get_caller_identity_with_iam_user_credentials_async(
     region: str, partition: str
 ) -> None:
     with mock_aws():
-        async with _session().client("iam", region_name=region) as iam:
+        async with AioSession().create_client("iam", region_name=region) as iam:
             iam_user = (await iam.create_user(UserName="new-user"))["User"]
             access_key = (await iam.create_access_key(UserName="new-user"))["AccessKey"]
 
-        async with _session().client(
+        async with AioSession().create_client(
             "sts",
             region_name=region,
             aws_access_key_id=access_key["AccessKeyId"],
@@ -214,7 +210,7 @@ async def test_get_caller_identity_with_assumed_role_credentials_async(
     region: str, partition: str
 ) -> None:
     with mock_aws():
-        async with _session().client("iam", region_name=region) as iam:
+        async with AioSession().create_client("iam", region_name=region) as iam:
             trust_policy_document = {
                 "Version": "2012-10-17",
                 "Statement": {
@@ -230,13 +226,13 @@ async def test_get_caller_identity_with_assumed_role_credentials_async(
                 )
             )["Role"]["Arn"]
 
-        async with _session().client("sts", region_name=region) as sts:
+        async with AioSession().create_client("sts", region_name=region) as sts:
             assumed_role = await sts.assume_role(
                 RoleArn=iam_role_arn, RoleSessionName="new-session"
             )
             access_key = assumed_role["Credentials"]
 
-        async with _session().client(
+        async with AioSession().create_client(
             "sts",
             region_name=region,
             aws_access_key_id=access_key["AccessKeyId"],
@@ -252,7 +248,7 @@ async def test_get_caller_identity_with_assumed_role_credentials_async(
 @pytest.mark.asyncio
 async def test_federation_token_with_too_long_policy_async() -> None:
     with mock_aws():
-        async with _session().client("sts", region_name="us-east-1") as sts:
+        async with AioSession().create_client("sts", region_name="us-east-1") as sts:
             resource_tmpl = (
                 "arn:aws:s3:::yyyy-xxxxx-cloud-default/"
                 "my_default_folder/folder-name-%s/*"

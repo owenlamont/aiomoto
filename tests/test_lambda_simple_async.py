@@ -5,7 +5,7 @@ import json
 from typing import Any
 import zipfile
 
-import aioboto3
+from aiobotocore.session import AioSession
 import pytest
 
 from aiomoto import mock_aws
@@ -14,10 +14,6 @@ from aiomoto import mock_aws
 LAMBDA_REGION = "us-west-2"
 PYTHON_VERSION = "3.11"
 FUNCTION_NAME = "test-function-123"
-
-
-def _session() -> aioboto3.Session:
-    return aioboto3.Session()
 
 
 def _lambda_zip() -> bytes:
@@ -34,9 +30,11 @@ def _lambda_zip() -> bytes:
 @pytest.mark.asyncio
 async def test_run_function_async() -> None:
     with mock_aws(config={"lambda": {"use_docker": False}}):
-        async with _session().client("iam", region_name=LAMBDA_REGION) as iam:
+        async with AioSession().create_client("iam", region_name=LAMBDA_REGION) as iam:
             role_arn = await _create_role(iam)
-        async with _session().client("lambda", region_name=LAMBDA_REGION) as client:
+        async with AioSession().create_client(
+            "lambda", region_name=LAMBDA_REGION
+        ) as client:
             await _create_function(client, role_arn)
             result = await client.invoke(FunctionName=FUNCTION_NAME, LogType="Tail")
 
@@ -49,9 +47,11 @@ async def test_run_function_async() -> None:
 async def test_run_function_no_log_async() -> None:
     payload = {"results": "results"}
     with mock_aws(config={"lambda": {"use_docker": False}}):
-        async with _session().client("iam", region_name=LAMBDA_REGION) as iam:
+        async with AioSession().create_client("iam", region_name=LAMBDA_REGION) as iam:
             role_arn = await _create_role(iam)
-        async with _session().client("lambda", region_name=LAMBDA_REGION) as client:
+        async with AioSession().create_client(
+            "lambda", region_name=LAMBDA_REGION
+        ) as client:
             await _create_function(client, role_arn)
 
             first = await client.invoke(
