@@ -6,7 +6,8 @@ readme = "README.md"
 authors = [
     { name = "Owen Lamont", email = "owenrlamont@gmail.com" }
 ]
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 keywords = [
     "aws",
@@ -25,7 +26,6 @@ classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
-    "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
@@ -209,7 +209,7 @@ ft-test = [
 ]
 
 [build-system]
-requires = ["uv_build>=0.9.9,<0.10.0"]
+requires = ["uv_build>=0.11.16,<0.12.0"]
 build-backend = "uv_build"
 
 [tool.uv]
