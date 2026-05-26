@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-import aioboto3
+from aiobotocore.session import AioSession
 import pytest
 
 from aiomoto import mock_aws
@@ -12,15 +12,11 @@ REGION = "us-east-1"
 ACCOUNT_ID = "123456789012"
 
 
-def _session() -> aioboto3.Session:
-    return aioboto3.Session()
-
-
 @pytest.mark.asyncio
 async def test_create_and_delete_topic_async() -> None:
     topic_name = f"topic-{uuid4().hex[:6]}"
     with mock_aws():
-        async with _session().client("sns", region_name=REGION) as sns:
+        async with AioSession().create_client("sns", region_name=REGION) as sns:
             await sns.create_topic(Name=topic_name)
             topics = (await sns.list_topics())["Topics"]
             assert len(topics) == 1
@@ -38,7 +34,7 @@ async def test_create_and_delete_topic_async() -> None:
 async def test_topic_attributes_and_tags_async() -> None:
     topic_name = f"topic-{uuid4().hex[:6]}"
     with mock_aws():
-        async with _session().client("sns", region_name=REGION) as sns:
+        async with AioSession().create_client("sns", region_name=REGION) as sns:
             topic_arn = (
                 await sns.create_topic(
                     Name=topic_name,
@@ -63,23 +59,35 @@ async def test_topic_attributes_and_tags_async() -> None:
 @pytest.mark.asyncio
 async def test_publish_to_sqs_raw_async() -> None:
     with mock_aws():
+        session = AioSession()
         async with (
-            _session().resource("sns", region_name=REGION) as sns_res,
-            _session().resource("sqs", region_name=REGION) as sqs_res,
+            session.create_client("sns", region_name=REGION) as sns,
+            session.create_client("sqs", region_name=REGION) as sqs,
         ):
-            topic = await sns_res.create_topic(Name="some-topic")
-            queue = await sqs_res.create_queue(QueueName="test-queue")
+            topic_arn = (await sns.create_topic(Name="some-topic"))["TopicArn"]
+            queue_url = (await sqs.create_queue(QueueName="test-queue"))["QueueUrl"]
+            queue_arn = (
+                await sqs.get_queue_attributes(
+                    QueueUrl=queue_url, AttributeNames=["QueueArn"]
+                )
+            )["Attributes"]["QueueArn"]
 
-            queue_arn = (await queue.attributes)["QueueArn"]
-            subscription = await topic.subscribe(Protocol="sqs", Endpoint=queue_arn)
-            await subscription.set_attributes(
-                AttributeName="RawMessageDelivery", AttributeValue="true"
+            subscription_arn = (
+                await sns.subscribe(
+                    TopicArn=topic_arn, Protocol="sqs", Endpoint=queue_arn
+                )
+            )["SubscriptionArn"]
+            await sns.set_subscription_attributes(
+                SubscriptionArn=subscription_arn,
+                AttributeName="RawMessageDelivery",
+                AttributeValue="true",
             )
 
-            await topic.publish(Message="my message")
-            messages = await queue.receive_messages(
-                MaxNumberOfMessages=1, WaitTimeSeconds=0
+            await sns.publish(TopicArn=topic_arn, Message="my message")
+            received = await sqs.receive_message(
+                QueueUrl=queue_url, MaxNumberOfMessages=1, WaitTimeSeconds=0
             )
 
+    messages = received.get("Messages", [])
     assert len(messages) == 1
-    assert await messages[0].body == "my message"
+    assert messages[0]["Body"] == "my message"

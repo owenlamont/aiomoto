@@ -3,7 +3,7 @@ from __future__ import annotations
 from contextlib import AbstractAsyncContextManager
 from typing import Any
 
-import aioboto3
+from aiobotocore.session import AioSession
 import pytest
 
 from aiomoto import mock_aws
@@ -13,7 +13,7 @@ FAKE_TAGS = {"TestKey": "TestValue", "TestKey2": "TestValue2"}
 
 
 def _client(region: str) -> AbstractAsyncContextManager[Any]:
-    return aioboto3.Session().client("kafka", region_name=region)
+    return AioSession().create_client("kafka", region_name=region)
 
 
 @mock_aws

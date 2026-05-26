@@ -1,9 +1,9 @@
 # aiomoto
 
-`aiomoto` is Moto for aiobotocore / aioboto3 (while staying compatible with classic
+`aiomoto` is Moto for aiobotocore (while staying compatible with classic
 botocore / boto3). It adapts Moto's stubber so async and sync clients share the same
 in-memory backend: you can write to a mock S3 bucket with boto3 and read it back via
-aiobotocore or aioboto3 in the same process.
+aiobotocore in the same process.
 
 ## Supported today
 
@@ -11,7 +11,7 @@ aiobotocore or aioboto3 in the same process.
 - Actively exercised in tests: S3 (CRUD + listings + streaming reads), DynamoDB
   (create/describe/put/get), Secrets Manager, SES, SNS, SQS, KMS, STS, Lambda, Events,
   Kafka/MSK, and s3fs async integration — all sharing one Moto backend between sync
-  boto3/botocore and async aiobotocore/aioboto3 clients.
+  boto3/botocore and async aiobotocore clients.
 - Other Moto services often work out of the box through the same patch layer; if you
   hit a service-specific gap, open an issue with a minimal repro so we can add a
   focused slice.
@@ -20,7 +20,7 @@ For the evolving project roadmap, see the wiki: <https://github.com/owenlamont/a
 
 ## Motivation
 
-Like many others I've wanted to use Moto with aiobotocore and aioboto3 but found that
+Like many others I've wanted to use Moto with aiobotocore but found that
 wasn't supported, see:
 
 - <https://github.com/getmoto/moto/issues/2039>
@@ -80,7 +80,7 @@ pip install "aiomoto[polars]"
 ## Usage
 
 Use `aiomoto.mock_aws` as a drop-in replacement for Moto's `mock_aws` that works
-with both synchronous boto3/botocore clients and asynchronous aiobotocore/aioboto3
+with both synchronous boto3/botocore clients and asynchronous aiobotocore
 clients in the same process. It supports `with` and `async with` (and can decorate
 sync/async callables).
 
@@ -289,8 +289,8 @@ The living roadmap sits in the wiki [Roadmap](https://github.com/owenlamont/aiom
 
 - Mixing raw Moto decorators with `aiomoto.mock_aws` in the same test is unsupported;
   the contexts manage shared state differently and can diverge.
-- aiomoto wraps moto and patches aiobotocore; aioboto3 and s3fs should be covered
-  automatically as they use aiobotocore clients/resources.
+- aiomoto wraps moto and patches aiobotocore; s3fs should be covered automatically
+  as it uses aiobotocore clients underneath.
 - We keep version ranges narrow and tested together, if you notice a new version of
   aiobotocore or moto that doesn't get covered feel free to raise an issue for this.
 - s3fs caches filesystem instances; create them inside `mock_aws` and close them so

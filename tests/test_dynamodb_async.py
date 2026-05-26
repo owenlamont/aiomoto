@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import aioboto3
 from aiobotocore.session import AioSession
 import boto3
 from botocore.exceptions import ClientError
@@ -64,12 +63,12 @@ async def test_dynamodb_backend_isolated_by_region() -> None:
 
 
 @pytest.mark.asyncio
-async def test_aioboto3_resource_supports_sort_keys_and_indexes() -> None:
+async def test_async_client_supports_sort_keys_and_indexes() -> None:
     with mock_aws():
-        async with aioboto3.Session().resource(
+        async with AioSession().create_client(
             "dynamodb", region_name=AWS_REGION
         ) as dynamodb:
-            table = await dynamodb.create_table(
+            await dynamodb.create_table(
                 TableName="complex",
                 KeySchema=[
                     {"AttributeName": "pk", "KeyType": "HASH"},
@@ -107,17 +106,20 @@ async def test_aioboto3_resource_supports_sort_keys_and_indexes() -> None:
                 ],
                 ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
             )
-            await table.put_item(
+            await dynamodb.put_item(
+                TableName="complex",
                 Item={
-                    "pk": "parent",
-                    "sk": "0001",
-                    "lsi_sk": "alt",
-                    "gsi_pk": "g-1",
-                    "payload": "v1",
-                }
+                    "pk": {"S": "parent"},
+                    "sk": {"S": "0001"},
+                    "lsi_sk": {"S": "alt"},
+                    "gsi_pk": {"S": "g-1"},
+                    "payload": {"S": "v1"},
+                },
             )
-            item = await table.get_item(Key={"pk": "parent", "sk": "0001"})
-            assert item["Item"]["payload"] == "v1"
+            item = await dynamodb.get_item(
+                TableName="complex", Key={"pk": {"S": "parent"}, "sk": {"S": "0001"}}
+            )
+            assert item["Item"]["payload"]["S"] == "v1"
 
         sync = boto3.client("dynamodb", region_name=AWS_REGION)
         desc = sync.describe_table(TableName="complex")["Table"]
@@ -148,23 +150,3 @@ async def test_sync_put_visible_to_async_client() -> None:
                 TableName="bridge", Key={"pk": {"S": "from-sync"}}
             )
             assert item["Item"]["pk"]["S"] == "from-sync"
-
-
-@pytest.mark.asyncio
-async def test_sync_put_visible_to_async_resource() -> None:
-    with mock_aws():
-        sync = boto3.client("dynamodb", region_name=AWS_REGION)
-        sync.create_table(
-            TableName="bridge-res",
-            KeySchema=[{"AttributeName": "pk", "KeyType": "HASH"}],
-            AttributeDefinitions=[{"AttributeName": "pk", "AttributeType": "S"}],
-            BillingMode="PAY_PER_REQUEST",
-        )
-        sync.put_item(TableName="bridge-res", Item={"pk": {"S": "sync-val"}})
-
-        async with aioboto3.Session().resource(
-            "dynamodb", region_name=AWS_REGION
-        ) as dynamodb:
-            table = await dynamodb.Table("bridge-res")
-            item = await table.get_item(Key={"pk": "sync-val"})
-            assert item["Item"]["pk"] == "sync-val"

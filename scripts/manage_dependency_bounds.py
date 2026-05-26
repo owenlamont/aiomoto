@@ -33,8 +33,8 @@ class Bound:
         return self.token.split("[", 1)[0]
 
 
-# Packages we actively manage (aioboto3-related dev deps and stub packages are
-# intentionally excluded). Upper bounds come from the snapshot taken at loosen.
+# Packages we actively manage (stub packages are intentionally excluded).
+# Upper bounds come from the snapshot taken at loosen.
 BOUNDS: tuple[Bound, ...] = (
     Bound("aiobotocore"),
     Bound("moto"),

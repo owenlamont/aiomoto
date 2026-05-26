@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import aioboto3
+from aiobotocore.session import AioSession
 from botocore.exceptions import ClientError
 import pytest
 
@@ -10,14 +10,10 @@ from aiomoto import mock_aws
 ACCOUNT_ID = "123456789012"
 
 
-def _session() -> aioboto3.Session:
-    return aioboto3.Session()
-
-
 @pytest.mark.asyncio
 async def test_create_key_without_description_async() -> None:
     with mock_aws():
-        async with _session().client("kms", region_name="us-east-1") as kms:
+        async with AioSession().create_client("kms", region_name="us-east-1") as kms:
             metadata = (await kms.create_key(Policy="my policy"))["KeyMetadata"]
 
     assert metadata["AWSAccountId"] == ACCOUNT_ID
@@ -30,7 +26,7 @@ async def test_create_key_without_description_async() -> None:
 async def test_create_key_with_invalid_key_spec_async() -> None:
     unsupported_key_spec = "NotSupportedKeySpec"
     with mock_aws():
-        async with _session().client("kms", region_name="us-east-1") as kms:
+        async with AioSession().create_client("kms", region_name="us-east-1") as kms:
             with pytest.raises(ClientError) as ex:  # pragma: no branch
                 await kms.create_key(Policy="my policy", KeySpec=unsupported_key_spec)
 
@@ -42,7 +38,7 @@ async def test_create_key_with_invalid_key_spec_async() -> None:
 @pytest.mark.asyncio
 async def test_create_key_async() -> None:
     with mock_aws():
-        async with _session().client("kms", region_name="us-east-1") as kms:
+        async with AioSession().create_client("kms", region_name="us-east-1") as kms:
             symmetric = await kms.create_key(
                 Policy="my policy",
                 Description="my key",
@@ -97,7 +93,7 @@ async def test_create_key_async() -> None:
 @pytest.mark.asyncio
 async def test_create_multi_region_key_async() -> None:
     with mock_aws():
-        async with _session().client("kms", region_name="us-east-1") as kms:
+        async with AioSession().create_client("kms", region_name="us-east-1") as kms:
             key = await kms.create_key(
                 Policy="my policy",
                 Description="my key",
@@ -114,7 +110,7 @@ async def test_create_multi_region_key_async() -> None:
 @pytest.mark.asyncio
 async def test_non_multi_region_key_has_no_multi_region_properties_async() -> None:
     with mock_aws():
-        async with _session().client("kms", region_name="us-east-1") as kms:
+        async with AioSession().create_client("kms", region_name="us-east-1") as kms:
             key = await kms.create_key(
                 Policy="my policy",
                 Description="my key",

@@ -6,6 +6,7 @@ import boto3
 import pytest
 
 from aiomoto import mock_aws
+from aiomoto.patches import server_mode as server_mode_patches
 
 
 if hasattr(sys, "_is_gil_enabled") and not sys._is_gil_enabled():  # pragma: no cover
@@ -75,4 +76,21 @@ def test_polars_server_mode_lazy_sink_roundtrip(
         _create_bucket(bucket)
         getattr(df.lazy(), sink_method)(path)
         read_df = getattr(pl, read_func)(path)
+        assert_frame_equal(read_df, df)
+
+
+def test_polars_write_ndjson_without_query_opt_flags(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    df = pl.DataFrame({"a": [1, 2], "b": ["x", "y"]})
+    bucket = "bucket-polars-ndjson-no-opt"
+    path = f"s3://{bucket}/data.ndjson"
+
+    with mock_aws(server_mode=True):
+        _create_bucket(bucket)
+        monkeypatch.setattr(
+            server_mode_patches, "_polars_query_opt_flags_eager", lambda: None
+        )
+        df.write_ndjson(path)
+        read_df = pl.read_ndjson(path)
         assert_frame_equal(read_df, df)
