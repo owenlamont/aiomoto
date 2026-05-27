@@ -28,10 +28,8 @@ class _DummyBodyWithLen:
     def __len__(self) -> int:
         return len(self._payload)
 
-    def read(self, amt: int | None = None) -> bytes:
-        if amt is None:
-            return self._payload
-        return self._payload[:amt]
+    def read(self) -> bytes:
+        return self._payload
 
     def close(self) -> None:
         self.closed = True

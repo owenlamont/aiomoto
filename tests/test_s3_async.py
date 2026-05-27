@@ -147,11 +147,13 @@ async def test_streaming_body_context_manager_rejects_sized_read() -> None:
 
             resp = await s3_async.get_object(Bucket="ctx-bucket", Key="ctx-key")
             async with resp["Body"] as stream:
-                assert await stream.read() == b"y" * 4096
+                partial = await stream.content.read(1024)
+            assert partial == b"y" * 1024
 
             resp = await s3_async.get_object(Bucket="ctx-bucket", Key="ctx-key")
             async with resp["Body"] as stream:
-                assert await stream.content.read(1024) == b"y" * 1024
+                full = await stream.read()
+            assert full == b"y" * 4096
 
 
 @pytest.mark.asyncio
