@@ -1,4 +1,5 @@
 import asyncio
+import io
 from types import SimpleNamespace
 from typing import Any
 
@@ -12,6 +13,7 @@ from aiomoto.exceptions import RealHTTPRequestBlockedError
 from aiomoto.patches.core import (
     _AIO_ENDPOINT_SEND_ATTR,
     _AioBytesIOAdapter,
+    _infer_length,
     _materialize_request_body,
     _wrap_stubber_handler,
     CorePatcher,
@@ -43,10 +45,9 @@ class _DummyBodyNone:
 @pytest.mark.asyncio
 async def test_aio_bytes_io_adapter_branches() -> None:
     adapter = _AioBytesIOAdapter(_DummyBodyWithLen(b"abc"), "url")
-    assert adapter._infer_length() == 3
+    assert _infer_length(adapter._raw) == 3
     assert adapter.at_eof() is False
     assert await adapter.read() == b"abc"
-    assert await adapter.read(2) == b"ab"
     assert adapter.at_eof() is False
     adapter.close()
     assert adapter.closed is True
@@ -59,6 +60,16 @@ async def test_aio_bytes_io_adapter_branches() -> None:
     adapter2 = _AioBytesIOAdapter(_DummyBodyNone(), "url")
     assert await adapter2.read() == b""
     assert adapter2.at_eof() is False
+
+
+@pytest.mark.asyncio
+async def test_adapter_read_rejects_size_like_client_response() -> None:
+    adapter = _AioBytesIOAdapter(io.BytesIO(b"abcdef"), "url")
+    with pytest.raises(TypeError):
+        await adapter.read(2)  # ClientResponse.read() takes no size argument
+
+    assert await adapter.content.read(2) == b"ab"
+    assert await adapter.content.read(-1) == b"cdef"
 
 
 @pytest.mark.asyncio

@@ -130,6 +130,59 @@ async def test_async_client_streaming_body_iteration() -> None:
 
 
 @pytest.mark.asyncio
+async def test_streaming_body_context_manager_rejects_sized_read() -> None:
+    with mock_aws():
+        s3_sync = boto3.client("s3", region_name=AWS_REGION)
+        s3_sync.create_bucket(Bucket="ctx-bucket")
+
+        async with AioSession().create_client("s3", region_name=AWS_REGION) as s3_async:
+            await s3_async.put_object(
+                Bucket="ctx-bucket", Key="ctx-key", Body=b"y" * 4096
+            )
+
+            resp = await s3_async.get_object(Bucket="ctx-bucket", Key="ctx-key")
+            with pytest.raises(TypeError):
+                async with resp["Body"] as stream:
+                    await stream.read(1024)
+
+            resp = await s3_async.get_object(Bucket="ctx-bucket", Key="ctx-key")
+            async with resp["Body"] as stream:
+                assert await stream.read() == b"y" * 4096
+
+            resp = await s3_async.get_object(Bucket="ctx-bucket", Key="ctx-key")
+            async with resp["Body"] as stream:
+                assert await stream.content.read(1024) == b"y" * 1024
+
+
+@pytest.mark.asyncio
+async def test_object_state_persists_across_repeated_reads() -> None:
+    with mock_aws():
+        async with AioSession().create_client("s3", region_name=AWS_REGION) as s3_async:
+            await s3_async.create_bucket(Bucket="persist-bucket")
+            await s3_async.put_object(
+                Bucket="persist-bucket", Key="persist-key", Body=b"hello world"
+            )
+
+            first = await s3_async.get_object(
+                Bucket="persist-bucket", Key="persist-key"
+            )
+            assert await first["Body"].read() == b"hello world"
+
+            second = await s3_async.get_object(
+                Bucket="persist-bucket", Key="persist-key"
+            )
+            assert await second["Body"].read() == b"hello world"
+
+            partial = await s3_async.get_object(
+                Bucket="persist-bucket", Key="persist-key"
+            )
+            body = partial["Body"]
+            assert await body.read(5) == b"hello"
+            assert await body.read(6) == b" world"
+            assert await body.read(1) == b""
+
+
+@pytest.mark.asyncio
 async def test_async_client_listing_preserves_key_names() -> None:
     with mock_aws():
         s3_sync = boto3.client("s3", region_name=AWS_REGION)
