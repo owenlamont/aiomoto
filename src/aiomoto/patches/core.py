@@ -23,46 +23,42 @@ _AIO_SESSION_CREATE_CLIENT_ATTR = "_create_client"
 _AIO_HIERARCHICAL_EMITTER_EMIT_ATTR = "_emit"
 
 
-class _AioBytesIOAdapter:
-    """Async wrapper around Moto's in-memory response body.
+def _infer_length(raw: Any) -> int | None:
+    if hasattr(raw, "getbuffer"):
+        with contextlib.suppress(Exception):  # pragma: no cover - defensive
+            return len(raw.getbuffer())
+    if hasattr(raw, "__len__"):
+        with contextlib.suppress(Exception):  # pragma: no cover - defensive
+            return len(raw)
+    length = getattr(raw, "len", None)
+    return int(length) if isinstance(length, int) else None
 
-    The adapter exposes the minimal surface that aiobotocore's StreamingBody
-    expects from an aiohttp.ClientResponse: a ``content.read`` coroutine,
-    ``at_eof`` helper, and ``url`` attribute. ``content`` points back to the
-    adapter to mirror aiohttp's layout. Some callers (for example s3fs) also
-    expect a ``close`` method on the body; the adapter provides a no-op close
-    that forwards to the underlying raw object when available.
+
+class _AioStreamReader:
+    """Async stand-in for aiohttp's ``StreamReader`` (``ClientResponse.content``).
+
+    ``StreamingBody.read(amt)`` delegates to ``raw.content.read(amt)``, so this
+    object accepts the size argument that aiohttp's ``StreamReader`` supports. The
+    enclosing :class:`_AioBytesIOAdapter` (which mirrors ``aiohttp.ClientResponse``)
+    deliberately does not, so context-manager misuse is surfaced rather than masked.
     """
 
-    def __init__(self, raw: Any, url: str) -> None:
+    def __init__(self, raw: Any, length: int | None) -> None:
         self._raw = raw
-        self.url = url
-        self.content = self  # StreamingBody calls ``raw.content.read``.
-        self._length = self._infer_length()
+        self._length = length
         self._eof = False
-        self.closed = False
 
-    def _infer_length(self) -> int | None:
-        if hasattr(self._raw, "getbuffer"):
-            with contextlib.suppress(Exception):  # pragma: no cover - defensive
-                return len(self._raw.getbuffer())
-        if hasattr(self._raw, "__len__"):
-            with contextlib.suppress(Exception):  # pragma: no cover - defensive
-                return len(self._raw)
-        length = getattr(self._raw, "len", None)
-        return int(length) if isinstance(length, int) else None
-
-    def _update_eof(self, read_len: int) -> None:
+    def _update_eof(self) -> None:
         if self._length is not None and hasattr(self._raw, "tell"):
             with contextlib.suppress(Exception):  # pragma: no cover - defensive
                 self._eof = self._raw.tell() >= self._length
 
     def at_eof(self) -> bool:
-        self._update_eof(0)
+        self._update_eof()
         return self._eof
 
-    async def read(self, amt: int | None = None) -> bytes:
-        data = self._raw.read() if amt is None else self._raw.read(amt)
+    async def read(self, n: int = -1) -> bytes:
+        data = self._raw.read() if n < 0 else self._raw.read(n)
         if data is None:
             data = b""
         if isinstance(data, bytes):
@@ -71,15 +67,49 @@ class _AioBytesIOAdapter:
             data_bytes = bytes(data)
         else:  # pragma: no cover - defensive
             data_bytes = bytes(data)
-        self._update_eof(len(data_bytes))
+        self._update_eof()
         return data_bytes
+
+    def close(self) -> None:
+        self._eof = True
+
+
+class _AioBytesIOAdapter:
+    """Async stand-in for the ``aiohttp.ClientResponse`` Moto would return.
+
+    aiobotocore wraps this object in a ``StreamingBody`` proxy, so it must expose
+    the surface ``StreamingBody`` reads from a ``ClientResponse``: a ``content``
+    stream reader (``raw.content.read``), an ``at_eof`` helper, and a ``url``
+    attribute. ``read`` mirrors ``aiohttp.ClientResponse.read`` and takes no size
+    argument, so misuse such as ``async with body as stream: await stream.read(amt)``
+    fails here the same way it does against real S3 instead of being silently
+    smoothed over. Some callers (for example s3fs) also expect ``close``; the
+    adapter forwards it to the underlying raw object when available.
+    """
+
+    def __init__(self, raw: Any, url: str) -> None:
+        self._raw = raw
+        self.url = url
+        self.content = _AioStreamReader(raw, _infer_length(raw))
+        self.closed = False
+
+    def at_eof(self) -> bool:
+        return self.content.at_eof()
+
+    async def read(self) -> bytes:
+        """Read the full response body, mirroring ``aiohttp.ClientResponse.read``.
+
+        Returns:
+            bytes: The remaining response payload.
+        """
+        return await self.content.read(-1)
 
     def close(self) -> None:
         close_fn = getattr(self._raw, "close", None)
         if close_fn:
             with contextlib.suppress(Exception):  # pragma: no cover - defensive
                 close_fn()
-        self._eof = True
+        self.content.close()
         self.closed = True
 
     async def __aenter__(self) -> _AioBytesIOAdapter:
