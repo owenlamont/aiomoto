@@ -5,7 +5,7 @@ botocore / boto3). It adapts Moto's stubber so async and sync clients share the 
 in-memory backend: you can write to a mock S3 bucket with boto3 and read it back via
 aiobotocore in the same process.
 
-📖 **Full documentation: <https://aiomoto-docs.pages.dev/>**
+📖 **Full documentation: <https://aiomoto.pages.dev/>**
 
 ## Supported today
 
@@ -22,12 +22,14 @@ aiobotocore in the same process.
 
 ```bash
 pip install aiomoto
+# or, in a uv project:
+uv add aiomoto
 ```
 
 aiomoto re-exposes Moto's service extras (for example `aiomoto[s3]`,
 `aiomoto[dynamodb]`, or `aiomoto[all]`), plus aiomoto-specific extras
 (`aiomoto[server]`, `aiomoto[pandas]`, `aiomoto[polars]`). See the
-[installation guide](https://aiomoto-docs.pages.dev/getting-started/installation/)
+[installation guide](https://aiomoto.pages.dev/getting-started/installation/)
 for details.
 
 ## Usage
@@ -57,28 +59,28 @@ async def demo() -> None:
 
 The documentation covers more:
 
-- [Contexts and decorators](https://aiomoto-docs.pages.dev/guides/contexts-and-decorators/)
+- [Contexts and decorators](https://aiomoto.pages.dev/guides/contexts-and-decorators/)
   — `with` / `async with`, `@mock_aws`, `reset` / `remove_data`, and the
   `AWS_ENDPOINT_URL` gotcha.
-- [Server mode](https://aiomoto-docs.pages.dev/guides/server-mode/) — run a local
+- [Server mode](https://aiomoto.pages.dev/guides/server-mode/) — run a local
   Moto server, endpoint-injection modes, and attaching to an existing server.
-- [Pandas and Polars](https://aiomoto-docs.pages.dev/guides/dataframes/) — `s3://`
+- [Pandas and Polars](https://aiomoto.pages.dev/guides/dataframes/) — `s3://`
   DataFrame I/O.
-- [Examples](https://aiomoto-docs.pages.dev/examples/) — S3, DynamoDB, SQS, SNS,
+- [Examples](https://aiomoto.pages.dev/examples/) — S3, DynamoDB, SQS, SNS,
   s3fs, and streaming reads.
-- [API reference](https://aiomoto-docs.pages.dev/reference/api/) — `mock_aws`,
+- [API reference](https://aiomoto.pages.dev/reference/api/) — `mock_aws`,
   `mock_aws_decorator`, `AutoEndpointMode`, and the exception types.
 
 ## Motivation
 
 Like many others I've wanted to use Moto with aiobotocore but found that wasn't
 supported. The
-[motivation page](https://aiomoto-docs.pages.dev/about/motivation/) explains the
+[motivation page](https://aiomoto.pages.dev/about/motivation/) explains the
 background and why aiomoto avoids depending on Moto's server mode by default.
 
 ## Limitations
 
 aiomoto keeps version ranges narrow and tested together, and a few integrations
 (notably pandas/polars S3 I/O) only work in server mode. See the
-[limitations page](https://aiomoto-docs.pages.dev/about/limitations/) for the full
+[limitations page](https://aiomoto.pages.dev/about/limitations/) for the full
 list, including free-threaded CPython support.

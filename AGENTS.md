@@ -33,7 +33,7 @@ focus is a clean, reusable library API rather than a CLI entry point.
   the src module they cover and use the `test_` prefix.
 - **/docs/** – Zensical documentation source (Markdown). Built output goes to
   `/site/` (gitignored). This is the canonical project documentation, published at
-  <https://aiomoto-docs.pages.dev/>.
+  <https://aiomoto.pages.dev/>.
 - **.complexipy.toml** – Complexipy configuration.
 - **.coveragerc** – Coverage path mappings.
 - **ty.toml** – ty type checker configuration.
