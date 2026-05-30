@@ -48,8 +48,8 @@ pip install "aiomoto[server]"
 
 ## Pandas and Polars
 
-The `pandas` and `polars` integrations add the DataFrame library and Moto's server
-extra (server mode is required for `s3://` I/O):
+These integrations bundle everything needed for `s3://` DataFrame I/O, which always
+runs through [server mode](../guides/server-mode.md):
 
 === "Pandas"
 
@@ -57,11 +57,17 @@ extra (server mode is required for `s3://` I/O):
     pip install "aiomoto[pandas]"
     ```
 
+    Pulls in pandas, Moto's server extra, and the S3 stack (`fsspec`, `s3fs`, and
+    `pyarrow` for parquet).
+
 === "Polars"
 
     ```bash
     pip install "aiomoto[polars]"
     ```
+
+    Pulls in polars and Moto's server extra; polars reads `s3://` through its
+    native object-store layer.
 
 See [Pandas and Polars](../guides/dataframes.md) for how `s3://` paths are routed
 through Moto.

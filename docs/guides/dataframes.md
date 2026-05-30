@@ -13,9 +13,9 @@ to the local Moto server.
 
 ## Pandas
 
-`aiomoto[pandas]` installs pandas and Moto's server extra. With server mode active,
-aiomoto patches pandas + fsspec/s3fs so `s3://` paths reach Moto. For S3 access you
-also need fsspec + s3fs (and pyarrow for parquet):
+`aiomoto[pandas]` installs pandas, Moto's server extra, and the S3 stack (`fsspec`,
+`s3fs`, and `pyarrow` for parquet). With server mode active, aiomoto patches
+pandas + fsspec/s3fs so `s3://` paths reach Moto:
 
 ```python
 import boto3
@@ -35,7 +35,9 @@ def test_pandas_server_mode_csv() -> None:
     assert result.equals(df)
 ```
 
-Requires pandas + fsspec + s3fs for S3 access (and pyarrow for parquet).
+aiomoto only patches pandas when `fsspec` and `s3fs` are both importable; the
+`aiomoto[pandas]` extra installs both (plus `pyarrow` for parquet), so the
+integration is active out of the box.
 
 ## Polars
 
