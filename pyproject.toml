@@ -166,6 +166,9 @@ xray = ["moto[xray]>=5.1.5,<=5.2.1"]
 pandas = [
     "moto[server]>=5.1.5,<=5.2.1",
     "pandas>=2.2.0,<=3.0.3",
+    "fsspec>=2024.6.0",
+    "s3fs>=2024.6.0",
+    "pyarrow>=22.0.0",
 ]
 polars = [
     "moto[server]>=5.1.5,<=5.2.1",
@@ -207,6 +210,7 @@ ft-test = [
     "pytest-xdist[psutil]>=3.8.0",
     "s3fs>=2024.6.0",
 ]
+docs = ["zensical==0.0.42"]
 
 [build-system]
 requires = ["uv_build>=0.11.16,<0.12.0"]
