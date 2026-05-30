@@ -82,10 +82,42 @@ Leaving both at their defaults gives each test an isolated, empty AWS environmen
 
 ## Nesting
 
-Contexts are re-entrant: entering an already-active context simply increases an
-internal depth counter, and the backend is only torn down when the outermost
-context exits. This makes it safe to combine a decorator with an inner `with
-mock_aws():` block without losing state.
+Nesting `mock_aws` is safe, and nested contexts **share a single Moto backend**
+rather than getting isolated state. While an outer context is active, entering an
+inner one &mdash; whether the same context object re-entered or a separate
+`mock_aws()` block &mdash; does not reset the backend, and exiting it does not remove
+data. The backend is reset only on the outermost enter and torn down only on the
+outermost exit.
+
+In practice this means you can combine a decorator with an inner `with mock_aws():`
+block without losing state: the inner block sees everything the outer set up, and
+anything it creates stays visible after it exits.
+
+```python
+import boto3
+from aiomoto import mock_aws
+
+
+@mock_aws
+def test_nested() -> None:
+    s3 = boto3.client("s3", region_name="us-east-1")
+    s3.create_bucket(Bucket="outer")
+
+    with mock_aws():
+        # The inner context shares the outer's backend (no reset).
+        assert any(b["Name"] == "outer" for b in s3.list_buckets()["Buckets"])
+        s3.create_bucket(Bucket="inner")
+
+    # The inner bucket is still here after the inner block exits.
+    names = {b["Name"] for b in s3.list_buckets()["Buckets"]}
+    assert names == {"outer", "inner"}
+```
+
+!!! note "Inner `reset` / `remove_data` are ignored while nested"
+
+    Because the Moto backend is shared and ref-counted, an inner context's `reset`
+    and `remove_data` flags have no effect while an outer context is active &mdash;
+    only the outermost context's settings apply.
 
 ## The `AWS_ENDPOINT_URL` gotcha
 
