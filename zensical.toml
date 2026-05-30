@@ -2,7 +2,7 @@
 site_name = "aiomoto"
 site_description = "Moto-style AWS service mocks for aiobotocore"
 site_author = "Owen Lamont"
-site_url = "https://aiomoto-docs.pages.dev/"
+site_url = "https://aiomoto.pages.dev/"
 copyright = """
 Copyright &copy; 2025-2026 Owen Lamont
 """
