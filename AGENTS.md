@@ -31,8 +31,9 @@ focus is a clean, reusable library API rather than a CLI entry point.
 - **/src/aiomoto/** – Library code.
 - **/tests/** – Pytest suite kept in sync with the src layout; module names mirror
   the src module they cover and use the `test_` prefix.
-- **Wiki** – <https://github.com/owenlamont/aiomoto/wiki> (roadmap, etc.). Keep wiki
-  pages in sync when behaviour changes.
+- **/docs/** – Zensical documentation source (Markdown). Built output goes to
+  `/site/` (gitignored). This is the canonical project documentation, published at
+  <https://aiomoto-docs.pages.dev/>.
 - **.complexipy.toml** – Complexipy configuration.
 - **.coveragerc** – Coverage path mappings.
 - **ty.toml** – ty type checker configuration.
@@ -44,6 +45,22 @@ focus is a clean, reusable library API rather than a CLI entry point.
 - **.rumdl.toml** – Markdown linter configuration.
 - **.ryl.toml** – YAML linter configuration.
 - **typos.toml** – Typos configuration.
+- **zensical.toml** – Documentation site configuration.
+
+## Documentation Site
+
+- The Zensical documentation source lives under `/docs/` with site configuration in
+  `zensical.toml`. Built output goes to `/site/` (gitignored).
+- Zensical is pinned via the `docs` dependency group in `pyproject.toml` and locked
+  in `uv.lock`. Use the uv group commands so transitive deps stay in sync with the
+  lockfile.
+- Build the site: `uv run --group docs zensical build --clean`.
+- Preview locally with live reload: `uv run --group docs zensical serve`.
+- Bumping Zensical: edit the pin in `pyproject.toml`, run `uv lock`, then rebuild to
+  confirm the new version still renders cleanly.
+- `docs/**` is excluded from `rumdl` (the docs use Zensical/Material Markdown
+  extensions rumdl does not understand), so keep prose readable but don't expect the
+  Markdown linter to cover it.
 
 ## Code Style
 
