@@ -27,8 +27,9 @@ read it back via aiobotocore in the same process.
 
     ---
 
-    Defaults to Moto's in-process mode &mdash; no port clashes, no race conditions,
-    safe to run tests in parallel. Server mode is opt-in when you need it.
+    Defaults to Moto's in-process mode &mdash; fast, with no server to spin up or
+    ports to manage. One flag opts into server mode for a real HTTP endpoint,
+    such as pandas / polars S3 I/O.
 
     [:octicons-arrow-right-24: Server mode](guides/server-mode.md)
 
