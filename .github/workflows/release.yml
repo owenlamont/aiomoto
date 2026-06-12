@@ -15,8 +15,8 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
       - run: uv build
       - name: Smoke test (wheel)
         run: uv run --isolated --no-project -p 3.11 --with dist/*.whl tests/test_smoke.py
