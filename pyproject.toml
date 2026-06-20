@@ -218,3 +218,6 @@ build-backend = "uv_build"
 
 [tool.uv]
 exclude-newer = "7 days"
+# Exempt pydantic-settings from the 7-day cooldown so the resolver may pick
+# 2.14.2, which fixes GHSA-4xgf-cpjx-pc3j.
+exclude-newer-package = { pydantic-settings = false }
