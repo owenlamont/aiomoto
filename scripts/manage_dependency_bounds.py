@@ -29,7 +29,7 @@ class Bound:
 
     @property
     def base(self) -> str:
-        """Return base package name without extras."""
+        """Base package name without extras."""
         return self.token.split("[", 1)[0]
 
 
