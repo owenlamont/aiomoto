@@ -77,14 +77,13 @@ class _AioStreamReader:
 class _AioBytesIOAdapter:
     """Async stand-in for the ``aiohttp.ClientResponse`` Moto would return.
 
-    aiobotocore wraps this object in a ``StreamingBody`` proxy, so it must expose
-    the surface ``StreamingBody`` reads from a ``ClientResponse``: a ``content``
-    stream reader (``raw.content.read``), an ``at_eof`` helper, and a ``url``
-    attribute. ``read`` mirrors ``aiohttp.ClientResponse.read`` and takes no size
-    argument, so misuse such as ``async with body as stream: await stream.read(amt)``
-    fails here the same way it does against real S3 instead of being silently
-    smoothed over. Some callers (for example s3fs) also expect ``close``; the
-    adapter forwards it to the underlying raw object when available.
+    aiobotocore's ``StreamingBody`` holds this object as its ``raw_stream``, so it
+    must expose the surface ``StreamingBody`` reads from a ``ClientResponse``: a
+    ``content`` stream reader (``raw.content.read``), an ``at_eof`` helper, and a
+    ``url`` attribute. ``read`` mirrors ``aiohttp.ClientResponse.read`` and takes no
+    size argument; sized reads arrive via ``StreamingBody.read(amt)``, which
+    delegates to ``content.read(amt)``. Some callers (for example s3fs) also expect
+    ``close``; the adapter forwards it to the underlying raw object when available.
     """
 
     def __init__(self, raw: Any, url: str) -> None:

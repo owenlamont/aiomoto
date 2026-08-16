@@ -22,7 +22,7 @@ def _assert_server_up(endpoint: str) -> None:
     parsed = parse.urlparse(endpoint)
     if parsed.scheme not in {"http", "https"}:
         raise AssertionError(f"Unexpected moto server endpoint: {endpoint}")
-    with request.urlopen(f"{endpoint}/moto-api", timeout=2) as response:  # noqa: S310
+    with request.urlopen(f"{endpoint}/moto-api", timeout=2) as response:  # ruff: ignore[suspicious-url-open-usage]
         assert response.status == 200
 
 
@@ -36,7 +36,7 @@ def _assert_server_down(endpoint: str) -> None:
 
 def _server_responding(endpoint: str) -> bool:
     try:
-        with request.urlopen(f"{endpoint}/moto-api", timeout=0.5):  # noqa: S310
+        with request.urlopen(f"{endpoint}/moto-api", timeout=0.5):  # ruff: ignore[suspicious-url-open-usage]
             return True
     except (error.URLError, OSError):
         return False
@@ -79,7 +79,7 @@ def test_server_mode_preserves_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("AWS_DEFAULT_REGION", raising=False)
     with mock_aws(server_mode=True):
         assert os.environ["AWS_ACCESS_KEY_ID"] == "orig"
-        assert os.environ["AWS_SECRET_ACCESS_KEY"] == "test"  # noqa: S105
+        assert os.environ["AWS_SECRET_ACCESS_KEY"] == "test"  # ruff: ignore[hardcoded-password-string]
         assert os.environ["AWS_DEFAULT_REGION"] == "us-east-1"
     assert os.environ["AWS_ACCESS_KEY_ID"] == "orig"
     assert "AWS_SECRET_ACCESS_KEY" not in os.environ

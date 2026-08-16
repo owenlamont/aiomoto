@@ -109,8 +109,8 @@ def test_apply_client_defaults_sets_region_and_creds(
     assert args["use_ssl"] is False
     assert args["region_name"] == "us-east-1"
     assert args["aws_access_key_id"] == "test"
-    assert args["aws_secret_access_key"] == "test"  # noqa: S105
-    assert args["aws_session_token"] == "token"  # noqa: S105
+    assert args["aws_secret_access_key"] == "test"  # ruff: ignore[hardcoded-password-string]
+    assert args["aws_session_token"] == "token"  # ruff: ignore[hardcoded-password-string]
     assert args["config"] is not None
 
 
@@ -507,7 +507,7 @@ def test_restore_s3fs_noop_when_missing() -> None:
 def test_patch_s3fs_injects_defaults(
     monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
 ) -> None:
-    class _S3FileSystem:  # noqa: B903
+    class _S3FileSystem:  # ruff: ignore[class-as-data-structure]
         def __init__(
             self,
             *,
@@ -546,7 +546,7 @@ def test_patch_s3fs_injects_defaults(
 def test_patch_s3fs_does_not_override_user_kwargs(
     monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
 ) -> None:
-    class _S3FileSystem:  # noqa: B903
+    class _S3FileSystem:  # ruff: ignore[class-as-data-structure]
         def __init__(
             self,
             *,
@@ -582,7 +582,7 @@ def test_patch_s3fs_does_not_override_user_kwargs(
 def test_patch_s3fs_if_missing_respects_user_kwargs(
     monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
 ) -> None:
-    class _S3FileSystem:  # noqa: B903
+    class _S3FileSystem:  # ruff: ignore[class-as-data-structure]
         def __init__(
             self,
             *,

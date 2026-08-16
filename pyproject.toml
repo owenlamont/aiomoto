@@ -18,7 +18,7 @@ keywords = [
     "mocks",
 ]
 dependencies = [
-    "aiobotocore>=2.24.1,<=3.7.0",
+    "aiobotocore>=2.24.1,<=3.9.0",
     "moto>=5.1.5,<=5.2.2",
     "platformdirs>=4.0.0",
 ]
@@ -165,14 +165,14 @@ wafv2 = ["moto[wafv2]>=5.1.5,<=5.2.2"]
 xray = ["moto[xray]>=5.1.5,<=5.2.2"]
 pandas = [
     "moto[server]>=5.1.5,<=5.2.2",
-    "pandas>=2.2.0,<=3.0.3",
+    "pandas>=2.2.0,<=3.0.5",
     "fsspec>=2024.6.0",
     "s3fs>=2024.6.0",
     "pyarrow>=22.0.0",
 ]
 polars = [
     "moto[server]>=5.1.5,<=5.2.2",
-    "polars>=1.35.1,<=1.42.1",
+    "polars>=1.35.1,<=1.43.2",
 ]
 
 [dependency-groups]
@@ -191,13 +191,13 @@ dev = [
     "s3fs>=2024.6.0",
     "pytest-randomly>=4.0.1",
     "pytest-xdist[psutil]>=3.8.0",
-    "pandas>=2.2.0,<=3.0.3",
+    "pandas>=2.2.0,<=3.0.5",
     "pyarrow>=22.0.0",
     "pandas-stubs>=2.3.3.251201",
     # Gated on Windows 3.14+ until pywin32 free-threaded wheels land:
     # https://github.com/mhammond/pywin32/issues/2303
     "moto[server]>=5.1.5,<=5.2.2; python_full_version < \"3.14\" or sys_platform != \"win32\"",
-    "polars>=1.35.1,<=1.42.1",
+    "polars>=1.35.1,<=1.43.2",
 ]
 ft-test = [
     "coverage>=7.6.9",
