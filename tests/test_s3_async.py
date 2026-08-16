@@ -130,7 +130,7 @@ async def test_async_client_streaming_body_iteration() -> None:
 
 
 @pytest.mark.asyncio
-async def test_streaming_body_context_manager_rejects_sized_read() -> None:
+async def test_streaming_body_context_manager_supports_sized_read() -> None:
     with mock_aws():
         s3_sync = boto3.client("s3", region_name=AWS_REGION)
         s3_sync.create_bucket(Bucket="ctx-bucket")
@@ -141,13 +141,15 @@ async def test_streaming_body_context_manager_rejects_sized_read() -> None:
             )
 
             resp = await s3_async.get_object(Bucket="ctx-bucket", Key="ctx-key")
-            with pytest.raises(TypeError):
-                async with resp["Body"] as stream:
-                    await stream.read(1024)
+            body = resp["Body"]
+            async with body as stream:
+                assert stream is body
+                assert await stream.read(1024) == b"y" * 1024
+                assert await stream.read() == b"y" * 3072
 
             resp = await s3_async.get_object(Bucket="ctx-bucket", Key="ctx-key")
             async with resp["Body"] as stream:
-                partial = await stream.content.read(1024)
+                partial = await stream.raw_stream.content.read(1024)
             assert partial == b"y" * 1024
 
             resp = await s3_async.get_object(Bucket="ctx-bucket", Key="ctx-key")

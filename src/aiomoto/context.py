@@ -98,7 +98,7 @@ def _healthcheck(endpoint: str) -> None:
         )
     health_url = f"{endpoint}/moto-api"
     try:
-        with request.urlopen(health_url, timeout=2) as response:  # noqa: S310
+        with request.urlopen(health_url, timeout=2) as response:  # ruff: ignore[suspicious-url-open-usage]
             if response.status != 200:
                 raise ServerModeHealthcheckError(
                     f"aiomoto server-mode healthcheck failed: {health_url}"

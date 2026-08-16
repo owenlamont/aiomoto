@@ -13,7 +13,7 @@ to JSON so we can pick safe minimum bounds for pyproject.toml.
 import argparse
 import json
 from pathlib import Path
-import subprocess  # noqa: S404
+import subprocess  # ruff: ignore[suspicious-subprocess-import]
 import time
 from typing import Any
 
@@ -37,7 +37,7 @@ def run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         Completed process with stdout/stderr captured.
     """
 
-    return subprocess.run(cmd, text=True, capture_output=True, check=False)  # noqa: S603
+    return subprocess.run(cmd, text=True, capture_output=True, check=False)  # ruff: ignore[subprocess-without-shell-equals-true]
 
 
 def run_combo(aio_ver: str, moto_ver: str, tests: list[str]) -> dict[str, Any]:
