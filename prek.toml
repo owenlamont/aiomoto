@@ -54,7 +54,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/rohaquinlop/complexipy-pre-commit"
-rev = "v6.2.0"
+rev = "v7.0.1"
 hooks = [
   {
     id = "complexipy",
@@ -77,14 +77,14 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/rvben/rumdl-pre-commit"
-rev = "v0.2.52"
+rev = "v0.2.58"
 hooks = [
   { id = "rumdl" }
 ]
 
 [[repos]]
 repo = "https://github.com/charliermarsh/ruff-pre-commit"
-rev = "v0.16.1"
+rev = "v0.16.4"
 hooks = [
   {
     id = "ruff-check",
