@@ -62,10 +62,18 @@ def parse_args() -> argparse.Namespace:
         description="Loosen or restore dependency upper bounds in pyproject.toml"
     )
     parser.add_argument(
-        "command", choices=["loosen-bounds", "add-bounds"], help="Operation to run"
+        "command",
+        choices=["loosen-bounds", "add-bounds", "runtime-bounds-widened"],
+        help=(
+            "Operation to run; runtime-bounds-widened prints true when a published "
+            "(non dependency-group) upper bound rose relative to --baseline"
+        ),
     )
     parser.add_argument(
         "--project-path", default="pyproject.toml", help="Path to pyproject.toml"
+    )
+    parser.add_argument(
+        "--baseline", type=Path, help="pyproject.toml to compare against"
     )
     return parser.parse_args()
 
@@ -239,6 +247,43 @@ def _process_section(
                 val = new_val  # so further bounds see updated string
 
 
+def _runtime_upper_bounds(doc: tomlkit.TOMLDocument) -> dict[str, Version]:
+    project = doc.get("project", {})
+    runtime_sections = [
+        project.get("dependencies", []),
+        *project.get("optional-dependencies", {}).values(),
+    ]
+    uppers: dict[str, Version] = {}
+    for section in runtime_sections:
+        for value in section:
+            req = Requirement(value)
+            _, upper = extract_bounds(req)
+            if upper is not None:
+                uppers[render_req(req, [])] = Version(upper)
+    return uppers
+
+
+def runtime_bounds_widened(
+    *, baseline: tomlkit.TOMLDocument, current: tomlkit.TOMLDocument
+) -> bool:
+    """Report whether any published dependency's upper bound rose.
+
+    Published dependencies are ``[project].dependencies`` and
+    ``[project.optional-dependencies]``; dependency groups never reach PyPI.
+    Requirements are matched by name, extras and marker.
+
+    Returns:
+        True if some requirement's upper bound in ``current`` exceeds its upper
+        bound in ``baseline``.
+    """
+
+    baseline_uppers = _runtime_upper_bounds(baseline)
+    return any(
+        key in baseline_uppers and upper > baseline_uppers[key]
+        for key, upper in _runtime_upper_bounds(current).items()
+    )
+
+
 def load_snapshot() -> dict[str, dict[str, str]]:
     """Load the bounds snapshot if it exists.
 
@@ -289,12 +334,21 @@ def main() -> None:
     """CLI entrypoint.
 
     Raises:
-        SystemExit: if add-bounds is invoked without a prior loosen snapshot.
+        SystemExit: if add-bounds is invoked without a prior loosen snapshot, or
+            runtime-bounds-widened without --baseline.
     """
 
     args = parse_args()
     path = Path(args.project_path)
     doc = tomlkit.parse(path.read_text())
+
+    if args.command == "runtime-bounds-widened":
+        if args.baseline is None:
+            raise SystemExit("runtime-bounds-widened requires --baseline")
+        baseline = tomlkit.parse(args.baseline.read_text())
+        widened = runtime_bounds_widened(baseline=baseline, current=doc)
+        print(str(widened).lower())
+        return
 
     if args.command == "loosen-bounds":
         snapshot = apply(doc, loosen_item)

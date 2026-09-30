@@ -35,6 +35,16 @@ jobs:
         run: uv run scripts/manage_dependency_bounds.py add-bounds
       - name: Re-lock with pinned versions
         run: uv lock
+      - name: Bump patch version if a published upper bound widened
+        id: bump
+        run: |
+          git show HEAD:pyproject.toml > "$RUNNER_TEMP/pyproject.base.toml"
+          widened=$(uv run --quiet scripts/manage_dependency_bounds.py runtime-bounds-widened \
+            --baseline "$RUNNER_TEMP/pyproject.base.toml")
+          if [ "$widened" = "true" ]; then
+            uv version --bump patch --no-sync
+            echo "note=Bumps the patch version because a published dependency upper bound widened; merging tags and releases it." >> "$GITHUB_OUTPUT"
+          fi
       - name: Install prek
         run: uv tool install prek
       - name: Run prek autoupdate --cooldown-days 7
@@ -67,6 +77,8 @@ jobs:
             This PR upgrades dependencies via `uv sync --upgrade --all-extras`,
             refreshes `uv.lock`, updates `prek.toml` by running
             `prek autoupdate --cooldown-days 7`.
+
+            ${{ steps.bump.outputs.note }}
           branch: bot/update-deps-and-linters
           author: GitHub Actions <actions@github.com>
           delete-branch: true
