@@ -79,6 +79,6 @@ jobs:
             `prek autoupdate --cooldown-days 7`.
 
             ${{ steps.bump.outputs.note }}
-          branch: bot/update-deps-and-linters
+          branch: bot/test-auto-release-bump
           author: GitHub Actions <actions@github.com>
           delete-branch: true
