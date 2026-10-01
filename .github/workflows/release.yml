@@ -6,9 +6,30 @@ on:
       # Publish on any tag that looks like a semantic version e.g. 1.2.3
       - '*.*.*'
 
+permissions:
+  contents: read
+
 jobs:
+  version-check:
+    name: Check tag matches version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+      - name: Compare tag with pyproject version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |-
+          set -euo pipefail
+          version="$(uv version --short)"
+          if [ "${version}" != "${RELEASE_TAG}" ]; then
+            echo "Tag ${RELEASE_TAG} does not match pyproject version ${version}." >&2
+            exit 1
+          fi
+
   pypi:
     name: Publish to PyPI
+    needs: [version-check]
     runs-on: ubuntu-latest
     environment:
       name: release
@@ -23,3 +44,23 @@ jobs:
       - name: Smoke test (source distribution)
         run: uv run --isolated --no-project -p 3.11 --with dist/*.tar.gz tests/test_smoke.py
       - run: uv publish --trusted-publishing always
+
+  github-release:
+    name: Create GitHub release
+    needs: [pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create the release unless one already exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |-
+          set -euo pipefail
+          if gh release view "${RELEASE_TAG}" -R "${GITHUB_REPOSITORY}" > /dev/null 2>&1; then
+            echo "Release ${RELEASE_TAG} already exists."
+            exit 0
+          fi
+          gh release create "${RELEASE_TAG}" -R "${GITHUB_REPOSITORY}" \
+            --verify-tag --title "${RELEASE_TAG}" --generate-notes
