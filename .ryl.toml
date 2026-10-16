@@ -1,10 +1,16 @@
+indent-width = 2
+
 [files]
 yaml = [
     "*.yaml",
     "*.yml",
 ]
 
-[rules]
+[lint]
+fixable = ["ALL"]
+unfixable = []
+
+[lint.rules]
 anchors = "enable"
 comments = "disable"
 comments-indentation = "disable"
@@ -22,30 +28,41 @@ quoted-strings = "disable"
 trailing-spaces = "enable"
 truthy = "disable"
 
-[rules.braces]
+[lint.rules.braces]
 level = "warning"
 max-spaces-inside = 1
 
-[rules.brackets]
+[lint.rules.brackets]
 level = "warning"
 max-spaces-inside = 1
 
-[rules.colons]
+[lint.rules.colons]
 level = "warning"
 
-[rules.commas]
+[lint.rules.commas]
 level = "warning"
 
-[rules.empty-lines]
+[lint.rules.empty-lines]
 level = "warning"
 
-[rules.hyphens]
+[lint.rules.hyphens]
 level = "warning"
 
-[rules.indentation]
+[lint.rules.indentation]
 indent-sequences = "consistent"
 level = "warning"
 
-[fix]
-fixable = ["ALL"]
-unfixable = []
+[format]
+quote-style = "single"
+line-ending = "lf"
+indent-sequences = true
+dash-on-own-line = false
+brace-spacing = true
+max-blank-lines = 1
+comment-spacing = 2
+comment-starting-space = "add"
+document-start = "preserve"
+document-end = "preserve"
+fold-long-lines = false
+sequence-style = "preserve"
+mapping-style = "preserve"
