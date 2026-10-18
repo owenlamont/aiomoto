@@ -784,6 +784,9 @@ def test_patch_polars_injects_storage_options(
     mocker.patch(
         "aiomoto.patches.server_mode.importlib.util.find_spec", return_value=object()
     )
+    mocker.patch(
+        "aiomoto.patches.server_mode.version", autospec=True, return_value="2.0.0"
+    )
 
     patcher = ServerModePatcher()
     patcher._endpoint = "http://localhost:5000"
