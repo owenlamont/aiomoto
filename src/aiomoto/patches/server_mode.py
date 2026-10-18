@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from enum import StrEnum
 import importlib
 from importlib.metadata import version
@@ -253,6 +253,27 @@ def _require_server_settings(
     return endpoint, mode
 
 
+def _polars_read_uses_fsspec(arguments: Mapping[str, object]) -> bool:
+    # Match the CSV and IPC reader backends in Polars 2:
+    # https://github.com/pola-rs/polars/blob/py-2.0.0/py-polars/src/polars/io/csv/functions.py#L382-L391
+    # https://github.com/pola-rs/polars/blob/py-2.0.0/py-polars/src/polars/io/csv/functions.py#L507-L519
+    # https://github.com/pola-rs/polars/blob/py-2.0.0/py-polars/src/polars/io/ipc/functions.py#L132-L146
+    if "encoding" not in arguments:
+        return bool(arguments.get("use_pyarrow"))
+    if arguments["encoding"] not in {"utf8", "utf8-lossy"}:
+        return True
+    return bool(
+        arguments["use_pyarrow"]
+        and arguments["schema_overrides"] is None
+        and arguments["n_rows"] is None
+        and not arguments["low_memory"]
+        and arguments["null_values"] is None
+        and arguments["with_column_names"] is None
+        and arguments["credential_provider"] == "auto"
+        and arguments["include_file_paths"] is None
+    )
+
+
 def _wrap_polars_io(
     *,
     original: Callable[..., Any],
@@ -272,7 +293,7 @@ def _wrap_polars_io(
         if _is_s3_source(source):
             endpoint, mode = get_settings()
             apply_options = apply_storage_options
-            if native_reads and not bound.arguments.get("use_pyarrow", False):
+            if native_reads and not _polars_read_uses_fsspec(bound.arguments):
                 apply_options = _apply_polars_storage_options
             bound.arguments["storage_options"] = apply_options(
                 bound.arguments.get("storage_options"), endpoint, mode
