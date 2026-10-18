@@ -220,6 +220,7 @@ source = { editable = "." }
 dependencies = [
     { name = "aiobotocore" },
     { name = "moto" },
+    { name = "packaging" },
     { name = "platformdirs" },
 ]
 
@@ -599,7 +600,6 @@ dev = [
     { name = "coverage" },
     { name = "freezegun" },
     { name = "moto", extra = ["server"], marker = "python_full_version < '3.14' or sys_platform != 'win32'" },
-    { name = "packaging" },
     { name = "pandas" },
     { name = "pandas-stubs" },
     { name = "polars" },
@@ -756,6 +756,7 @@ requires-dist = [
     { name = "moto", extras = ["transcribe"], marker = "extra == 'transcribe'", specifier = ">=5.1.5,<=5.2.3" },
     { name = "moto", extras = ["wafv2"], marker = "extra == 'wafv2'", specifier = ">=5.1.5,<=5.2.3" },
     { name = "moto", extras = ["xray"], marker = "extra == 'xray'", specifier = ">=5.1.5,<=5.2.3" },
+    { name = "packaging", specifier = ">=25.0" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.2.0,<=3.0.6" },
     { name = "platformdirs", specifier = ">=4.0.0" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=1.35.1,<=2.0.0" },
@@ -770,7 +771,6 @@ dev = [
     { name = "coverage", specifier = ">=7.6.9" },
     { name = "freezegun", specifier = ">=1.5.1" },
     { name = "moto", extras = ["server"], marker = "python_full_version < '3.14' or sys_platform != 'win32'", specifier = ">=5.1.5,<=5.2.3" },
-    { name = "packaging", specifier = ">=25.0" },
     { name = "pandas", specifier = ">=2.2.0,<=3.0.6" },
     { name = "pandas-stubs", specifier = ">=2.3.3.251201" },
     { name = "polars", specifier = ">=1.35.1,<=2.0.0" },

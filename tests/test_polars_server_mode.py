@@ -94,3 +94,27 @@ def test_polars_write_ndjson_without_query_opt_flags(
         df.write_ndjson(path)
         read_df = pl.read_ndjson(path)
         assert_frame_equal(read_df, df)
+
+
+def test_polars_server_mode_csv_pyarrow_roundtrip() -> None:
+    frame = pl.DataFrame({"value": [1, 2]})
+    path = "s3://bucket-polars-csv-pyarrow/data.csv"
+
+    with mock_aws(server_mode=True):
+        _create_bucket("bucket-polars-csv-pyarrow")
+        frame.write_csv(path)
+        result = pl.read_csv(path, use_pyarrow=True)
+
+    assert_frame_equal(result, frame)
+
+
+def test_polars_server_mode_ipc_pyarrow_roundtrip() -> None:
+    frame = pl.DataFrame({"value": [1, 2]})
+    path = "s3://bucket-polars-ipc-pyarrow/data.ipc"
+
+    with mock_aws(server_mode=True):
+        _create_bucket("bucket-polars-ipc-pyarrow")
+        frame.write_ipc(path)
+        result = pl.read_ipc(path, use_pyarrow=True)
+
+    assert_frame_equal(result, frame)

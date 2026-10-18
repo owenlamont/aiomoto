@@ -20,6 +20,7 @@ keywords = [
 dependencies = [
     "aiobotocore>=2.24.1,<=3.9.2",
     "moto>=5.1.5,<=5.2.3",
+    "packaging>=25.0",
     "platformdirs>=4.0.0",
 ]
 classifiers = [
@@ -179,7 +180,6 @@ polars = [
 dev = [
     "tomlkit>=0.13.2",
     "boto3-stubs[full]>=1.40.61",
-    "packaging>=25.0",
     "coverage>=7.6.9",
     "freezegun>=1.5.1",
     "pytest>=8.3.4",

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from enum import StrEnum
 import importlib
+from importlib.metadata import version
 import importlib.util
 import inspect
 import os
@@ -14,6 +15,7 @@ from typing import Any
 
 from botocore.config import Config
 from botocore.session import Session as BotocoreSession
+from packaging.version import Version
 
 from aiomoto.exceptions import AutoEndpointError
 
@@ -252,12 +254,14 @@ def _require_server_settings(
 
 
 def _wrap_polars_io(
+    *,
     original: Callable[..., Any],
     get_settings: Callable[[], tuple[str, AutoEndpointMode]],
     source_arg: str,
     apply_storage_options: Callable[
         [dict[str, Any] | None, str, AutoEndpointMode], dict[str, Any] | None
     ],
+    native_reads: bool = False,
 ) -> Callable[..., Any]:
     signature = inspect.signature(original)
 
@@ -267,7 +271,10 @@ def _wrap_polars_io(
         source = bound.arguments.get(source_arg)
         if _is_s3_source(source):
             endpoint, mode = get_settings()
-            bound.arguments["storage_options"] = apply_storage_options(
+            apply_options = apply_storage_options
+            if native_reads and not bound.arguments.get("use_pyarrow", False):
+                apply_options = _apply_polars_storage_options
+            bound.arguments["storage_options"] = apply_options(
                 bound.arguments.get("storage_options"), endpoint, mode
             )
         return original(*bound.args, **bound.kwargs)
@@ -574,6 +581,7 @@ class ServerModePatcher:
         if modules is None:
             return
         polars, dataframe, lazyframe = modules
+        native_reads = Version(version("polars")) >= Version("2.0.0")
         self._original_polars_functions = {}
         self._original_polars_df_methods = {}
         self._original_polars_lazy_methods = {}
@@ -601,7 +609,11 @@ class ServerModePatcher:
                 polars,
                 name,
                 _wrap_polars_io(
-                    original, _get_settings, source_arg, apply_storage_options
+                    original=original,
+                    get_settings=_get_settings,
+                    source_arg=source_arg,
+                    apply_storage_options=apply_storage_options,
+                    native_reads=native_reads and name in {"read_csv", "read_ipc"},
                 ),
             )
 
@@ -620,7 +632,10 @@ class ServerModePatcher:
                 wrapper = _wrap_polars_write_ndjson(original, _get_settings)
             else:
                 wrapper = _wrap_polars_io(
-                    original, _get_settings, source_arg, apply_storage_options
+                    original=original,
+                    get_settings=_get_settings,
+                    source_arg=source_arg,
+                    apply_storage_options=apply_storage_options,
                 )
             setattr(dataframe, name, wrapper)
 
@@ -639,7 +654,10 @@ class ServerModePatcher:
                 lazyframe,
                 name,
                 _wrap_polars_io(
-                    original, _get_settings, source_arg, apply_storage_options
+                    original=original,
+                    get_settings=_get_settings,
+                    source_arg=source_arg,
+                    apply_storage_options=apply_storage_options,
                 ),
             )
 

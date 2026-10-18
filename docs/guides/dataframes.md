@@ -62,6 +62,9 @@ def test_polars_server_mode_parquet() -> None:
     assert result.equals(df)
 ```
 
+CSV and IPC reads use native cloud storage options with Polars 2.0 and later.
+Polars 1.x and reads with `use_pyarrow=True` use fsspec storage options instead.
+
 ## s3fs
 
 s3fs uses aiobotocore clients underneath, so it is covered automatically in
