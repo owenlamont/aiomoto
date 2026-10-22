@@ -2,6 +2,10 @@
 
 - Mixing raw Moto decorators with `aiomoto.mock_aws` in the same test is
   unsupported; the contexts manage shared state differently and can diverge.
+- In-process and server-mode contexts cannot be active in the same process at the
+  same time. Starting the other mode raises `ModeConflictError`, including when
+  different threads attempt to start both modes concurrently. Use separate
+  processes to run both modes at once.
 - aiomoto wraps Moto and patches aiobotocore; s3fs should be covered automatically
   in in-process mode since it uses aiobotocore clients underneath.
 - Version ranges are kept narrow and tested together. If you notice a new version of
