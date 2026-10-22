@@ -218,3 +218,6 @@ build-backend = "uv_build"
 
 [tool.uv]
 exclude-newer = "7 days"
+# Remove this security exception once the patched release clears the cooldown:
+# https://github.com/certifi/python-certifi/security/advisories/GHSA-6q48-6c7w-9gw2
+exclude-newer-package = { certifi = false }
