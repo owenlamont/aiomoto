@@ -51,6 +51,8 @@ P = ParamSpec("P")
 R = TypeVar("R")
 RA = TypeVar("RA")
 
+_MODE_START_LOCK = threading.Lock()
+
 _ENV_KEYS = (
     "AWS_ACCESS_KEY_ID",
     "AWS_SECRET_ACCESS_KEY",
@@ -130,7 +132,7 @@ class _InProcessState:
             return self._count > 0
 
     def enter(self) -> None:
-        with self._lock:
+        with _MODE_START_LOCK, self._lock:
             if _SERVER_STATE.active():
                 raise ModeConflictError(
                     "aiomoto server_mode cannot be combined with in-process mode."
@@ -160,7 +162,7 @@ class _ServerModeState:
             return self._count > 0
 
     def start(self, server_port: int | None) -> tuple[str, int, str, str | None]:
-        with self._lock:
+        with _MODE_START_LOCK, self._lock:
             if _INPROCESS_STATE.active():
                 raise ModeConflictError(
                     "aiomoto server_mode cannot be combined with in-process mode."
