@@ -28,7 +28,7 @@ async def test_create_key_with_invalid_key_spec_async() -> None:
     with mock_aws():
         async with AioSession().create_client("kms", region_name="us-east-1") as kms:
             with pytest.raises(ClientError) as ex:  # pragma: no branch
-                await kms.create_key(Policy="my policy", KeySpec=unsupported_key_spec)
+                await kms.create_key(Policy="my policy", KeySpec=unsupported_key_spec)  # ty: ignore[invalid-argument-type]
 
     err = ex.value.response["Error"]
     assert err["Code"] == "ValidationException"
