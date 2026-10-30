@@ -63,16 +63,10 @@ hooks = [
 ]
 
 [[repos]]
-repo = "local"
+repo = "https://github.com/astral-sh/ty-pre-commit"
+rev = "v0.0.95"
 hooks = [
-  {
-    id = "ty",
-    name = "ty",
-    language = "system",
-    entry = "ty check --python .venv . --error-on-warning",
-    pass_filenames = false,
-    types_or = ["python", "toml"]
-  }
+  { id = "ty" }
 ]
 
 [[repos]]
