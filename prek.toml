@@ -66,7 +66,12 @@ hooks = [
 repo = "https://github.com/astral-sh/ty-pre-commit"
 rev = "v0.0.95"
 hooks = [
-  { id = "ty" }
+  { id = "ty" },
+  {
+    id = "ty",
+    name = "ty (update_optional.py)",
+    args = ["--script", "scripts/update_optional.py"]
+  }
 ]
 
 [[repos]]
