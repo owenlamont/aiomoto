@@ -64,7 +64,7 @@ async def test_aio_bytes_io_adapter_branches() -> None:
 async def test_adapter_read_rejects_size_like_client_response() -> None:
     adapter = _AioBytesIOAdapter(io.BytesIO(b"abcdef"), "url")
     with pytest.raises(TypeError):
-        await adapter.read(2)  # ClientResponse.read() takes no size argument
+        await adapter.read(2)  # ty: ignore[too-many-positional-arguments]
 
     assert await adapter.content.read(2) == b"ab"
     assert await adapter.content.read(-1) == b"cdef"

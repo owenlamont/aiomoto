@@ -22,7 +22,7 @@ import os
 from pathlib import Path
 import threading
 import time
-from typing import Any, no_type_check, overload, ParamSpec, TypeVar
+from typing import Any, Final, no_type_check, overload, ParamSpec, TypeVar
 from urllib import error, parse, request
 import uuid
 
@@ -51,7 +51,7 @@ P = ParamSpec("P")
 R = TypeVar("R")
 RA = TypeVar("RA")
 
-_MODE_START_LOCK = threading.Lock()
+_MODE_START_LOCK: Final = threading.Lock()
 
 _ENV_KEYS = (
     "AWS_ACCESS_KEY_ID",

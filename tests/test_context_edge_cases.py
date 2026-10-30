@@ -6,6 +6,7 @@ import os
 import threading
 import time
 from types import SimpleNamespace
+from typing import Final
 from urllib import error
 
 from freezegun import freeze_time
@@ -97,59 +98,73 @@ def test_server_state_start_rejects_inprocess(mocker: MockerFixture) -> None:
         state.start(server_port=None)
 
 
-def test_concurrent_mode_startup_rejects_conflict_without_deadlock(
-    monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
+_ACTIVE_CHECK_DELAY_SECONDS: Final = 0.05
+_THREAD_TIMEOUT_SECONDS: Final = 2.0
+
+
+def _delayed(active: Callable[[], bool]) -> Callable[[], bool]:
+    def delayed_active() -> bool:
+        time.sleep(_ACTIVE_CHECK_DELAY_SECONDS)
+        return active()
+
+    return delayed_active
+
+
+def _start_mode_after(
+    barrier: threading.Barrier,
+    start: Callable[[], object],
+    conflicts: list[ModeConflictError],
 ) -> None:
-    from aiomoto import context as context_module
-
-    in_process = _InProcessState()
-    server = _ServerModeState()
-    monkeypatch.setattr(context_module, "_INPROCESS_STATE", in_process)
-    monkeypatch.setattr(context_module, "_SERVER_STATE", server)
-    mocker.patch("aiomoto.context._healthcheck")
-    in_process_active = in_process.active
-    server_active = server.active
-
-    def delayed_in_process_active() -> bool:
-        time.sleep(0.05)
-        return in_process_active()
-
-    def delayed_server_active() -> bool:
-        time.sleep(0.05)
-        return server_active()
-
-    monkeypatch.setattr(in_process, "active", delayed_in_process_active)
-    monkeypatch.setattr(server, "active", delayed_server_active)
-    barrier = threading.Barrier(2)
-    errors: list[Exception] = []
-
-    def start_mode(start: Callable[[], object]) -> None:
-        barrier.wait(timeout=2)
-        try:
-            start()
-        except Exception as exc:
-            errors.append(exc)
-
-    threads = [
-        threading.Thread(target=start_mode, args=(in_process.enter,), daemon=True),
-        threading.Thread(
-            target=start_mode,
-            args=(lambda: server.start(server_port=1234),),
-            daemon=True,
-        ),
-    ]
-    for thread in threads:
-        thread.start()
-    for thread in threads:
-        thread.join(timeout=2)
-    assert all(not thread.is_alive() for thread in threads)
+    barrier.wait(timeout=_THREAD_TIMEOUT_SECONDS)
     try:
-        assert len(errors) == 1
-        assert isinstance(errors[0], ModeConflictError)
-        assert in_process_active() != server_active()
-    finally:
-        server.stop()
-        in_process.exit()
+        start()
+    except ModeConflictError as exc:
+        conflicts.append(exc)
+
+
+@pytest.fixture
+def slow_inprocess_state(mocker: MockerFixture) -> _InProcessState:
+    state = _InProcessState()
+    mocker.patch("aiomoto.context._INPROCESS_STATE", state)
+    mocker.patch.object(state, "active", side_effect=_delayed(state.active))
+    return state
+
+
+@pytest.fixture
+def slow_server_state(mocker: MockerFixture) -> _ServerModeState:
+    state = _ServerModeState()
+    mocker.patch("aiomoto.context._SERVER_STATE", state)
+    mocker.patch("aiomoto.context._healthcheck")
+    mocker.patch.dict(os.environ)
+    mocker.patch.object(state, "active", side_effect=_delayed(state.active))
+    return state
+
+
+def test_concurrent_mode_startup_rejects_conflict_without_deadlock(
+    slow_inprocess_state: _InProcessState, slow_server_state: _ServerModeState
+) -> None:
+    barrier = threading.Barrier(2)
+    conflicts: list[ModeConflictError] = []
+    inprocess_thread = threading.Thread(
+        target=_start_mode_after,
+        args=(barrier, slow_inprocess_state.enter, conflicts),
+        daemon=True,
+    )
+    server_thread = threading.Thread(
+        target=_start_mode_after,
+        args=(barrier, lambda: slow_server_state.start(server_port=1234), conflicts),
+        daemon=True,
+    )
+
+    inprocess_thread.start()
+    server_thread.start()
+    inprocess_thread.join(timeout=_THREAD_TIMEOUT_SECONDS)
+    server_thread.join(timeout=_THREAD_TIMEOUT_SECONDS)
+
+    assert not inprocess_thread.is_alive()
+    assert not server_thread.is_alive()
+    assert len(conflicts) == 1
+    assert slow_inprocess_state.active() != slow_server_state.active()
 
 
 def test_server_state_start_requires_endpoint(mocker: MockerFixture) -> None:

@@ -1,3 +1,6 @@
+[terminal]
+error-on-warning = true
+
 [rules]
 redundant-cast = "error"
 unused-ignore-comment = "error"
