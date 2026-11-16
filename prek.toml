@@ -54,7 +54,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/rohaquinlop/complexipy-pre-commit"
-rev = "v8.1.0"
+rev = "v8.3.0"
 hooks = [
   {
     id = "complexipy",
@@ -64,7 +64,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/astral-sh/ty-pre-commit"
-rev = "v0.0.95"
+rev = "v0.0.99"
 hooks = [
   { id = "ty" },
   {
@@ -76,14 +76,14 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/rvben/rumdl-pre-commit"
-rev = "v0.3.0"
+rev = "v0.3.2"
 hooks = [
   { id = "rumdl" }
 ]
 
 [[repos]]
 repo = "https://github.com/charliermarsh/ruff-pre-commit"
-rev = "v0.17.2"
+rev = "v0.17.4"
 hooks = [
   {
     id = "ruff-check",
@@ -110,7 +110,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/adhtruong/mirrors-typos"
-rev = "v1.51.1"
+rev = "v1.52.0"
 hooks = [
   {
     id = "typos",
@@ -134,7 +134,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/owenlamont/ryl-pre-commit"
-rev = "v0.26.0"
+rev = "v0.29.0"
 hooks = [
   { id = "ryl-check" },
   { id = "ryl-check-markdown" },
@@ -144,7 +144,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/woodruffw/zizmor-pre-commit"
-rev = "v1.31.1"
+rev = "v1.32.0"
 hooks = [
   {
     id = "zizmor",
